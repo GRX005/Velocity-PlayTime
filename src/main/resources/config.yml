@@ -1,0 +1,37 @@
+#Velocity playtime logger.
+file-version: 7
+isDataFileUpToDate: false
+Messages:
+  NO_CONSOLE_USE: "The console doesn't have a playtime."
+  YOUR_PLAYTIME: "§aYour playtime: %hours% hours %minutes% minutes %seconds% secs."
+  NO_PLAYER: "§cNo player found with this name."
+  OTHER_PLAYTIME: "§a%player%'s playtime: %hours% hours %minutes% minutes %seconds% secs."
+  NO_PERMISSION: "§cYou don't have permission for this command."
+  CONFIG_RELOAD: "§aThe config has been reloaded."
+  PTRESET: "§a%player%'s playtime has been reset."
+  PTRESET_HELP: "§a/playtimereset [player]"
+  PTRESETALL: "§aAll playtimes have been reset."
+  PTRESETALL_CONFIRM: "§aIf you are sure to delete every playtime, type /ptresetall confirm"
+  INVALID_ARGS: "§cYou've entered invalid arguments."
+  TOP_PLAYTIME_HEADER: "§aPlaytime toplist: "
+  TOP_PLAYTIME_LIST: "§a%player%: %hours% hours %minutes% minutes %seconds% secs."
+  TOP_PLAYTIME_FOOTER: "§a----------------------"
+
+Data:
+  TOPLIST_LIMIT: 10
+  BSTATS: true
+  #Choices are: "VANILLA" or "MINIMESSAGE". Use minimessage if you want gradients.
+  CONFIG_SERIALIZER: VANILLA
+  CHECK_FOR_UPDATES: true
+  CACHING: #Should improve performance when turned on. If there are issues with the plugin, try turning it off. The 2nd option is about how often unneeded entries are cleared from the cache, in ms. Note: Toplist limit can't be reloaded if this is turned on.
+    USE_CACHE: true
+    CACHE_UPDATE_INTERVAL: 60000
+  PERMISSIONS: #Permissions are not used by default, they can be turned on if needed.
+    VIEW_OWN_TIME: false
+    VIEW_OTHERS_TIME: false
+    VIEW_TOPLIST: false
+
+#You can define your rewards under 'Rewards:' with the following format: 'playtime in milliseconds': command
+#(1sec = 1000ms, you need to have one space at the start of very line)
+# '15000': lpv user %player% parent set group #Example command.
+Rewards:

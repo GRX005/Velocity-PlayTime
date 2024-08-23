@@ -3,7 +3,7 @@
 ## An open source playtime plugin for velocity.
 
 ***Features:***
-- Manages playtime asynchronously across the whole server network.
+- Manages playtime asynchronously across the whole network.
 - Configurable Playtime Toplist feature.
 - All messages seen by players are configurable, with vanilla or minimessage syntax.
 - Configurable permissions.

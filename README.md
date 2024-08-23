@@ -9,5 +9,6 @@
 - Configurable permissions.
 - The plugin manages a dynamic cache for relevant playtime values, messages and settings are also cached.
 - PlaceholderAPI support through plugin channel syncing, using my PlaytimeLink plugin.
+- Playtime Rewards feature support.
 
 For more info visit the SpigotMC page of the plugin: https://www.spigotmc.org/resources/playtime.117308/

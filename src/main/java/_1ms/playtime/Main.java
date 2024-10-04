@@ -21,13 +21,13 @@ import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
 import com.velocitypowered.api.proxy.server.RegisteredServer;
-import com.velocitypowered.api.proxy.server.ServerPing;
 import lombok.Getter;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -84,23 +84,35 @@ public class Main {
     private final Metrics.Factory metricsFactory;
 
     @Inject
-    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) throws ClassNotFoundException {
+    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) throws ClassNotFoundException, SQLException {
         new org.mariadb.jdbc.Driver();
         this.proxy = proxy;
         this.logger = logger;
         this.metricsFactory = metricsFactory;
         InitInstance();
 
-
         configHandler.initConfig(dataDirectory);
         if(configHandler.isDATABASE())
-            mySQLHandler.openConnection();
+            loadDB();
+    }
+
+    public void loadDB() {
+        if(mySQLHandler.conn != null)
+            mySQLHandler.closeConnection();
+        logger.info("Connecting to the database...");
+        mySQLHandler.openConnection();
+        try {
+            if(mySQLHandler.conn.isValid(2000))
+                logger.info("Successfully connected to the database.");
+            else
+                logger.error("Failed connecting to the database.");
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private void checkSpamH(HashMap<String, Long> spamH) {
-        spamH.forEach((key, val) -> {
-            if(System.currentTimeMillis()-val > configHandler.getSPAM_LIMIT()+5000) spamH.remove(key);
-        });
+        spamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue()) > configHandler.getSPAM_LIMIT() + 5000);
     }
 
     @Subscribe
@@ -192,6 +204,7 @@ public class Main {
         SimpleCommand simpleCommand5 = playtimeResetAll;
         commandManager.register(commandMeta5, simpleCommand5);
 
+        @SuppressWarnings("UnstableApiUsage")
         final ByteArrayDataOutput out = ByteStreams.newDataOutput();
         out.writeUTF("rs");
         proxy.getAllServers().forEach(server -> checkServerStatus(server).thenAccept(status -> {

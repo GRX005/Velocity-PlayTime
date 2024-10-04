@@ -12,7 +12,7 @@ public class MySQLHandler {
         this.configHandler = configHandler;
     }
 
-    private Connection conn;
+    public Connection conn;
     //TODO CONFIGBÓL
     public void openConnection() {
         final String url = "jdbc:mariadb://" + configHandler.getADDRESS() +":" + configHandler.getPORT() + "/" + configHandler.getDB_NAME() + "?user=" + configHandler.getUSERNAME() + "&password=" + configHandler.getPASSWORD() + "&driver=org.mariadb.jdbc.Driver";

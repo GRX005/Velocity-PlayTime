@@ -217,9 +217,8 @@ public class ConfigHandler {
         try {
             config.reload();
             makeConfigCache();
-            MySQLHandler sql = new MySQLHandler(this);
-            sql.closeConnection();
-            sql.openConnection();
+            if(DATABASE)
+                main.loadDB();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

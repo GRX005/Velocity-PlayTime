@@ -9,8 +9,6 @@ import com.velocitypowered.api.event.connection.DisconnectEvent;
 import com.velocitypowered.api.event.connection.PostLoginEvent;
 import com.velocitypowered.api.proxy.Player;
 
-import java.util.Optional;
-
 @SuppressWarnings("unused")
 public class PlaytimeEvents {
     private final Main main;
@@ -25,12 +23,12 @@ public class PlaytimeEvents {
         return EventTask.async(() -> {
             String playerName = e.getPlayer().getGameProfile().getName();
             if(!main.playtimeCache.containsKey(playerName)) {
-                Optional<Long> playtime = configHandler.getPtOptionalFromConfig(playerName);
-                if (playtime.isPresent()) {
-                    main.playtimeCache.put(playerName, playtime.get());
-                } else {
+                long playtime = main.getSavedPt(playerName);
+                if (playtime == -1) {
                     main.playtimeCache.put(playerName, 0L);
+                    return;
                 }
+                main.playtimeCache.put(playerName, playtime);
             }
         });
     }
@@ -40,7 +38,7 @@ public class PlaytimeEvents {
         return EventTask.async(() -> {
             final String playerName = e.getPlayer().getGameProfile().getName();
             final long playerTime = main.GetPlayTime(playerName);
-            configHandler.savePlaytime(playerName, playerTime);
+            main.savePt(playerName, playerTime);
             if(!configHandler.isUSE_CACHE())
                 main.playtimeCache.remove(playerName);
         });

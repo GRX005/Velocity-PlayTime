@@ -47,8 +47,17 @@ public class ConfigHandler {
     private Component TOP_PLAYTIME_HEADER;
     private String TOP_PLAYTIME_LIST;
     private Component TOP_PLAYTIME_FOOTER;
+    private String NO_SPAM;
+    private String ADDRESS;
+    private String DB_NAME;
+    private String USERNAME;
+    private String PASSWORD;
+
 
     private int TOPLIST_LIMIT;
+    private int SPAM_LIMIT;
+    private int PORT;
+    private boolean DATABASE;
     private boolean BSTATS;
     private boolean CHECK_FOR_UPDATES;
     private boolean USE_CACHE;
@@ -65,18 +74,6 @@ public class ConfigHandler {
 
     public void initConfig(@DataDirectory Path dataDirectory) {
         try{
-            dataConfig = YamlDocument.create(new File(dataDirectory.toFile(), "playtimes.yml"),
-                    Objects.requireNonNull(getClass().getResourceAsStream("/playtimes.yml")),
-                    GeneralSettings.DEFAULT,
-                    LoaderSettings.builder().setAutoUpdate(true).build(),
-                    DumperSettings.DEFAULT,
-                    UpdaterSettings.builder().setVersioning(new BasicVersioning("file-version"))
-                            .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS).build()
-            );
-
-            dataConfig.update();
-            dataConfig.save();
-
             config = YamlDocument.create(new File(dataDirectory.toFile(), "config.yml"),
                     Objects.requireNonNull(getClass().getResourceAsStream("/config.yml")),
                     GeneralSettings.DEFAULT,
@@ -89,11 +86,31 @@ public class ConfigHandler {
             config.update();
             config.save();
 
+            makeNonChanging();
+            makeConfigCache();
+
+            if(!DATABASE)
+                initDataConf(dataDirectory);
+
         } catch (IOException e) {
             main.getLogger().error("Config initialize error. ", e);
             Optional<PluginContainer> container = main.getProxy().getPluginManager().getPlugin("velocityplaytime"); //the plugin ID at the top.
             container.ifPresent(pluginContainer -> pluginContainer.getExecutorService().shutdown());
         }
+    }
+
+    private void initDataConf(@DataDirectory Path dataDirectory) throws IOException {
+        dataConfig = YamlDocument.create(new File(dataDirectory.toFile(), "playtimes.yml"),
+                Objects.requireNonNull(getClass().getResourceAsStream("/playtimes.yml")),
+                GeneralSettings.DEFAULT,
+                LoaderSettings.builder().setAutoUpdate(true).build(),
+                DumperSettings.DEFAULT,
+                UpdaterSettings.builder().setVersioning(new BasicVersioning("file-version"))
+                        .setOptionSorting(UpdaterSettings.OptionSorting.SORT_BY_DEFAULTS).build()
+        );
+
+        dataConfig.update();
+        dataConfig.save();
     }
 
     public void makeConfigCache() {
@@ -112,6 +129,16 @@ public class ConfigHandler {
         TOP_PLAYTIME_HEADER = initComp("Messages.TOP_PLAYTIME_HEADER");
         TOP_PLAYTIME_LIST = config.getString("Messages.TOP_PLAYTIME_LIST");
         TOP_PLAYTIME_FOOTER = initComp("Messages.TOP_PLAYTIME_FOOTER");
+        NO_SPAM = config.getString("Messages.NO_SPAM");
+        SPAM_LIMIT = config.getInt("Data.SPAM_LIMIT");
+        if(DATABASE) {
+            ADDRESS = config.getString("Data.DATABASE.ADDRESS");
+            PORT  = config.getInt("Data.DATABASE.PORT");
+            DB_NAME  = config.getString("Data.DATABASE.DB_NAME");
+            USERNAME = config.getString("Data.DATABASE.USERNAME");
+            final String cfg = config.getString("Data.DATABASE.PASSWORD");
+            PASSWORD = cfg == null ? "" : cfg;
+        }
 
         VIEW_OWN_TIME = config.getBoolean("Data.PERMISSIONS.VIEW_OWN_TIME");
         VIEW_OTHERS_TIME = config.getBoolean("Data.PERMISSIONS.VIEW_OTHERS_TIME");
@@ -131,6 +158,7 @@ public class ConfigHandler {
         BSTATS = config.getBoolean("Data.BSTATS");
         CHECK_FOR_UPDATES = config.getBoolean("Data.CHECK_FOR_UPDATES");
         isDataFileUpToDate = config.getBoolean("isDataFileUpToDate");
+        DATABASE = config.getString("Data.DATA_METHOD").equals("DATABASE");
         if(USE_CACHE)
             TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");
     }
@@ -154,14 +182,11 @@ public class ConfigHandler {
     }
 
     public long getPtFromConfig(String name) {
-        return dataConfig.getLong("Player-Data." + name + ".playtime");
+        final Long pt = dataConfig.getLong("Player-Data." + name + ".playtime");
+        return pt != null ? pt : -1;
     }
 
-    public Optional<Long> getPtOptionalFromConfig(String name) {
-        return dataConfig.getOptionalLong("Player-Data." + name + ".playtime");
-    }
-
-    public void savePlaytime(String name, long time) {
+    public void savePtToConfig(String name, long time) {
         dataConfig.set("Player-Data." + name + ".playtime", time);
         saveData();
     }
@@ -192,6 +217,9 @@ public class ConfigHandler {
         try {
             config.reload();
             makeConfigCache();
+            MySQLHandler sql = new MySQLHandler(this);
+            sql.closeConnection();
+            sql.openConnection();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }

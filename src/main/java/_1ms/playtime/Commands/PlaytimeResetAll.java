@@ -38,7 +38,7 @@ public class PlaytimeResetAll implements SimpleCommand {
                     sender.sendMessage(configHandler.getINVALID_ARGS());
                     return;
                 }
-                configHandler.nullDataConfig();
+                main.removeAllPt();
                 main.playtimeCache.keySet().removeIf(pname -> {
                     Optional<Player> player = main.getProxy().getPlayer(pname);
                     if (player.isPresent()) {

@@ -2,30 +2,37 @@ package _1ms.playtime;
 
 import _1ms.BuildConstants;
 import _1ms.playtime.Commands.*;
-import _1ms.playtime.Handlers.CacheHandler;
-import _1ms.playtime.Handlers.ConfigHandler;
-import _1ms.playtime.Handlers.DataConverter;
-import _1ms.playtime.Handlers.UpdateHandler;
+import _1ms.playtime.Handlers.*;
 import _1ms.playtime.Listeners.PlaytimeEvents;
 import _1ms.playtime.Listeners.RequestHandler;
+import com.google.common.io.ByteArrayDataOutput;
+import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandMeta;
+import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.event.Subscribe;
 import com.velocitypowered.api.event.proxy.ProxyInitializeEvent;
+import com.velocitypowered.api.event.proxy.ProxyShutdownEvent;
 import com.velocitypowered.api.plugin.Plugin;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.Player;
 import com.velocitypowered.api.proxy.ProxyServer;
 import com.velocitypowered.api.proxy.messages.MinecraftChannelIdentifier;
+import com.velocitypowered.api.proxy.server.RegisteredServer;
+import com.velocitypowered.api.proxy.server.ServerPing;
 import lombok.Getter;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 @Plugin(
@@ -48,10 +55,12 @@ public class Main {
     public UpdateHandler updateHandler;
     public PlaytimeReset playtimeReset;
     public PlaytimeResetAll playtimeResetAll;
+    public MySQLHandler mySQLHandler;
     public final MinecraftChannelIdentifier MCI = MinecraftChannelIdentifier.from("velocity:playtime");
 
     public void InitInstance() {
         configHandler = new ConfigHandler(this);
+        mySQLHandler = new MySQLHandler(configHandler);
         playtimeCommand = new PlaytimeCommand(this, configHandler);
         cacheHandler = new CacheHandler(this, configHandler);
         playtimeEvents = new PlaytimeEvents(this, configHandler);
@@ -75,20 +84,27 @@ public class Main {
     private final Metrics.Factory metricsFactory;
 
     @Inject
-    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
+    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) throws ClassNotFoundException {
+        new org.mariadb.jdbc.Driver();
         this.proxy = proxy;
         this.logger = logger;
         this.metricsFactory = metricsFactory;
         InitInstance();
 
+
         configHandler.initConfig(dataDirectory);
-        configHandler.makeNonChanging();
-        configHandler.makeConfigCache();
+        if(configHandler.isDATABASE())
+            mySQLHandler.openConnection();
+    }
+
+    private void checkSpamH(HashMap<String, Long> spamH) {
+        spamH.forEach((key, val) -> {
+            if(System.currentTimeMillis()-val > configHandler.getSPAM_LIMIT()+5000) spamH.remove(key);
+        });
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
-
 //        if(updateHandler.checkForUpdates())
 //            return;
         if(configHandler.isCHECK_FOR_UPDATES())
@@ -101,7 +117,11 @@ public class Main {
 
         if(configHandler.isUSE_CACHE()) {
             cacheHandler.buildCache();
-            proxy.getScheduler().buildTask(this, () -> cacheHandler.updateCache()).repeat(configHandler.getCACHE_UPDATE_INTERVAL(), TimeUnit.MILLISECONDS).schedule();
+            proxy.getScheduler().buildTask(this, () -> {
+                cacheHandler.updateCache();
+                checkSpamH(playtimeTopCommand.spamH);
+                checkSpamH(playtimeCommand.spamH);
+            }).repeat(configHandler.getCACHE_UPDATE_INTERVAL(), TimeUnit.MILLISECONDS).schedule();
         }
 
         if(configHandler.isBSTATS()) {
@@ -172,11 +192,79 @@ public class Main {
         SimpleCommand simpleCommand5 = playtimeResetAll;
         commandManager.register(commandMeta5, simpleCommand5);
 
+        final ByteArrayDataOutput out = ByteStreams.newDataOutput();
+        out.writeUTF("rs");
+        proxy.getAllServers().forEach(server -> checkServerStatus(server).thenAccept(status -> {
+            if(status){
+                proxy.getScheduler().buildTask(this, (task) -> {
+                    if(!server.getPlayersConnected().isEmpty()) {
+                        server.sendPluginMessage(MCI, out.toByteArray());
+                        task.cancel();
+                    }
+                }).repeat(1L, TimeUnit.SECONDS).schedule();
+            }
+        }));
+
+
         logger.info("Velocity PlayTime Loaded.");
+    }
+
+    public CompletableFuture<Boolean> checkServerStatus(RegisteredServer server) {
+        return server.ping()
+                .thenApply(ping -> true)
+                .exceptionally(ex -> false);
+    }
+
+    @Subscribe
+    public void ProxyShutdownEvent(ProxyShutdownEvent event) {
+        mySQLHandler.closeConnection();
+        logger.info("Velocity PlayTime Unloaded.");
+    }
+
+    public List<String> calcTab(CommandSource sender, String[] target) {
+        final List<String> tabargs = new ArrayList<>();
+        try {
+            for (Player player : proxy.getAllPlayers()) {
+                if (!player.equals(sender) && player.getGameProfile().getName().toLowerCase().startsWith(target[0].toLowerCase())) {
+                    tabargs.add(player.getGameProfile().getName());
+                }
+            }
+        } catch (Exception ignored) {
+            for (Player player : proxy.getAllPlayers()) {
+                if (!player.equals(sender)) {
+                    tabargs.add(player.getGameProfile().getName());
+                }
+            }
+        }
+        return tabargs;
     }
 
     public long GetPlayTime(String playerName) {
         return playtimeCache.getOrDefault(playerName, 0L);
+    }
+
+    public long getSavedPt(String name) {
+        return configHandler.isDATABASE() ? mySQLHandler.readData(name) : configHandler.getPtFromConfig(name);
+    }
+
+    public void savePt(String name, long time) {
+        if(configHandler.isDATABASE()) {
+            mySQLHandler.saveData(name, time);
+            return;
+        }
+        configHandler.savePtToConfig(name, time);
+    }
+
+    public void removeAllPt() {
+        if(configHandler.isDATABASE()) {
+            mySQLHandler.deleteAll();
+            return;
+        }
+        configHandler.nullDataConfig();
+    }
+
+    public Iterator<Object> getIterator() {
+        return configHandler.isDATABASE() ? mySQLHandler.getIterator() : configHandler.getConfigIterator("Player-Data", true);
     }
 
     public long calculatePlayTime(long rawValue, char v) {

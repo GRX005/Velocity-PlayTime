@@ -14,6 +14,7 @@ public class PlaytimeTopCommand implements SimpleCommand {
     private final Main main;
     private final CacheHandler cacheHandler;
     private final ConfigHandler configHandler;
+    public final HashMap<String, Long> spamH = new HashMap<>();
 
     public PlaytimeTopCommand(Main main, CacheHandler cacheHandler, ConfigHandler configHandler) {
         this.main = main;
@@ -31,6 +32,19 @@ public class PlaytimeTopCommand implements SimpleCommand {
         if(invocation.arguments().length > 0) {
             sender.sendMessage(configHandler.getINVALID_ARGS());
             return;
+        }
+        final long currT = System.currentTimeMillis();
+        if(!(configHandler.getSPAM_LIMIT() < 1) && sender instanceof Player player && !player.hasPermission("vpt.spam")) {
+            final String name = player.getUsername();
+            if(spamH.containsKey(name)) {
+                final long diffT = currT - spamH.get(name);
+                if(diffT < configHandler.getSPAM_LIMIT()) {
+                    final String msg = configHandler.getNO_SPAM().replace("%seconds%", String.valueOf(((configHandler.getSPAM_LIMIT()-diffT)/1000)+1));
+                    sender.sendMessage(configHandler.decideNonComponent(msg));
+                    return;
+                }
+            }
+            spamH.put(name, currT);
         }
         doSort(invocation);
     }
@@ -68,14 +82,14 @@ public class PlaytimeTopCommand implements SimpleCommand {
     }
 
     public HashMap<String, Long> getInRuntime() {
-        Iterator<Object> iterator = configHandler.getConfigIterator("Player-Data", true);
+        Iterator<Object> iterator = main.getIterator();
         final HashMap<String, Long> TempCache = new HashMap<>();
         if(iterator != null) {
             while (iterator.hasNext()) {
                 String Pname = (String) iterator.next();
                 Optional<Player> player = main.getProxy().getPlayer(Pname);
                 if (player.isEmpty()) {
-                    long Ptime = configHandler.getPtFromConfig(Pname);
+                    long Ptime = main.getSavedPt(Pname);
                     TempCache.put(Pname, Ptime);
                 }
                 iterator.remove();

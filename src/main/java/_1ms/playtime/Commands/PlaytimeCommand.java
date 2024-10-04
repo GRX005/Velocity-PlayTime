@@ -7,12 +7,14 @@ import com.velocitypowered.api.command.SimpleCommand;
 import com.velocitypowered.api.proxy.Player;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class PlaytimeCommand implements SimpleCommand {
     private final Main main;
     private final ConfigHandler configHandler;
+    public final HashMap<String, Long> spamH = new HashMap<>();
 
     public PlaytimeCommand(Main main, ConfigHandler configHandler) {
         this.main = main;
@@ -23,6 +25,19 @@ public class PlaytimeCommand implements SimpleCommand {
     public void execute(Invocation invocation) {
         String[] args = invocation.arguments();
         CommandSource sender = invocation.source();
+        final long currT = System.currentTimeMillis();
+        if(!(configHandler.getSPAM_LIMIT() < 1) && sender instanceof Player player && !player.hasPermission("vpt.spam")) {
+            final String name = player.getUsername();
+            if(spamH.containsKey(name)) {
+                final long diffT = currT - spamH.get(name);
+                if(diffT < configHandler.getSPAM_LIMIT()) {
+                    final String msg = configHandler.getNO_SPAM().replace("%seconds%", String.valueOf(((configHandler.getSPAM_LIMIT()-diffT)/1000)+1));
+                    sender.sendMessage(configHandler.decideNonComponent(msg));
+                    return;
+                }
+            }
+            spamH.put(name, currT);
+        }
         switch (args.length) {
             case 0 -> {
                 if(!(sender instanceof Player player)) {
@@ -42,7 +57,7 @@ public class PlaytimeCommand implements SimpleCommand {
                     sender.sendMessage(configHandler.getNO_PERMISSION());
                     return;
                 }
-                long PlayTime = main.playtimeCache.containsKey(args[0]) ? main.GetPlayTime(args[0]) : configHandler.getPtFromConfig(args[0]);
+                long PlayTime = main.playtimeCache.containsKey(args[0]) ? main.GetPlayTime(args[0]) : main.getSavedPt(args[0]);
                 if (PlayTime == 0) {
                     sender.sendMessage(configHandler.getNO_PLAYER());
                 } else {
@@ -72,25 +87,9 @@ public class PlaytimeCommand implements SimpleCommand {
 
     @Override
     public CompletableFuture<List<String>> suggestAsync(final Invocation invocation) {
-        List<String> tabargs = new ArrayList<>();
-        String[] args = invocation.arguments();
         CommandSource sender = invocation.source();
-        if(configHandler.isVIEW_OTHERS_TIME() && !sender.hasPermission("vpt.getotherstime")) {
-            return CompletableFuture.completedFuture(tabargs);
-        }
-        try {
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender) && player.getGameProfile().getName().toLowerCase().startsWith(args[0].toLowerCase())) {
-                    tabargs.add(player.getGameProfile().getName());
-                }
-            }
-        } catch (Exception ignored) {
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender)) {
-                    tabargs.add(player.getGameProfile().getName());
-                }
-            }
-        }
-        return CompletableFuture.completedFuture(tabargs);
+        if(configHandler.isVIEW_OTHERS_TIME() && !sender.hasPermission("vpt.getotherstime"))
+            return CompletableFuture.completedFuture(new ArrayList<>());
+        return CompletableFuture.completedFuture(main.calcTab(sender, invocation.arguments()));
     }
 }

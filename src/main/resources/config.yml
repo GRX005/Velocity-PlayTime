@@ -1,5 +1,5 @@
 #Velocity playtime logger.
-file-version: 7
+file-version: 8
 isDataFileUpToDate: false
 Messages:
   NO_CONSOLE_USE: "The console doesn't have a playtime."
@@ -16,12 +16,22 @@ Messages:
   TOP_PLAYTIME_HEADER: "§aPlaytime toplist: "
   TOP_PLAYTIME_LIST: "§a%player%: %hours% hours %minutes% minutes %seconds% secs."
   TOP_PLAYTIME_FOOTER: "§a----------------------"
+  NO_SPAM: "§cDo not spam the command. You have to wait %seconds% secs to do that again."
 
 Data:
   TOPLIST_LIMIT: 10
   BSTATS: true
+  SPAM_LIMIT: 0
   #Choices are: "VANILLA" or "MINIMESSAGE". Use minimessage if you want gradients.
   CONFIG_SERIALIZER: VANILLA
+  #Choices are: "YMLFILE" or "DATABASE".
+  DATA_METHOD: YMLFILE
+  DATABASE: #Only applies if you chose DATABASE as DATA_METHOD, leave password at null if the db doesn't have one, ex: jdbc:mariadb://127.0.0.1:3306/playtime?user=root&password=
+    ADDRESS: 127.0.0.1
+    PORT: 3306
+    DB_NAME: playtime
+    USERNAME: root
+    PASSWORD: null
   CHECK_FOR_UPDATES: true
   CACHING: #Should improve performance when turned on. If there are issues with the plugin, try turning it off. The 2nd option is about how often unneeded entries are cleared from the cache, in ms. Note: Toplist limit can't be reloaded if this is turned on.
     USE_CACHE: true

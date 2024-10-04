@@ -5,7 +5,6 @@ import _1ms.playtime.Handlers.ConfigHandler;
 import _1ms.playtime.Main;
 import com.velocitypowered.api.command.CommandSource;
 import com.velocitypowered.api.command.SimpleCommand;
-import com.velocitypowered.api.proxy.Player;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +39,7 @@ public class PlaytimeReset implements SimpleCommand {
                     resetPT(args[0], sender);
                     return;
                 }
-                if(configHandler.getPtFromConfig(args[0]) == 0) {
+                if(main.getSavedPt(args[0]) == 0) {
                     sender.sendMessage(configHandler.getNO_PLAYER());
                     return;
                 }
@@ -51,32 +50,16 @@ public class PlaytimeReset implements SimpleCommand {
     }
 
     private void resetPT(String player, CommandSource sender) {
-        configHandler.savePlaytime(player, 0L);
+        main.savePt(player, 0L);
         String message = configHandler.getPTRESET().replace("%player%", player);
         sender.sendMessage(configHandler.decideNonComponent(message));
     }
 
     @Override
     public CompletableFuture<List<String>> suggestAsync(final Invocation invocation) {
-        List<String> tabargs = new ArrayList<>();
-        String[] args = invocation.arguments();
         CommandSource sender = invocation.source();
-        if(!sender.hasPermission("vpt.ptreset")) {
-            return CompletableFuture.completedFuture(tabargs);
-        }
-        try {
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender) && player.getGameProfile().getName().toLowerCase().startsWith(args[0].toLowerCase())) {
-                    tabargs.add(player.getGameProfile().getName());
-                }
-            }
-        } catch (Exception ignored) {
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender)) {
-                    tabargs.add(player.getGameProfile().getName());
-                }
-            }
-        }
-        return CompletableFuture.completedFuture(tabargs);
+        if(!sender.hasPermission("vpt.ptreset"))
+            return CompletableFuture.completedFuture(new ArrayList<>());
+        return CompletableFuture.completedFuture(main.calcTab(sender, invocation.arguments()));
     }
 }

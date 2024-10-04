@@ -17,7 +17,7 @@ public class CacheHandler {
         this.configHandler = configHandler;
     }
     public void buildCache() {
-        Iterator<Object> iterator = configHandler.getConfigIterator("Player-Data", true);
+        Iterator<Object> iterator = main.getIterator();
         if(iterator == null)
             return;
         long start = System.currentTimeMillis();
@@ -25,7 +25,7 @@ public class CacheHandler {
         final HashMap<String, Long> TempCache = new HashMap<>();
         while (iterator.hasNext()) {
             String Pname = iterator.next().toString();
-            long Ptime = configHandler.getPtFromConfig(Pname);
+            long Ptime = main.getSavedPt(Pname);
             TempCache.put(Pname, Ptime);
             iterator.remove();
         }
@@ -46,7 +46,7 @@ public class CacheHandler {
     }
 
     public void upd2(String keyToRemove) {
-        Iterator<Object> iterator = configHandler.getConfigIterator("Player-Data", true);
+        Iterator<Object> iterator = main.getIterator();
         if(iterator == null)
             return;
         final HashMap<String, Long> TempCache = new HashMap<>();
@@ -54,7 +54,7 @@ public class CacheHandler {
             String Pname = iterator.next().toString();
             if(Objects.equals(Pname, keyToRemove))
                 continue;
-            long Ptime = configHandler.getPtFromConfig(Pname);
+            long Ptime = main.getSavedPt(Pname);
             TempCache.put(Pname, Ptime);
             iterator.remove();
         }

@@ -85,7 +85,6 @@ public class Main {
 
     @Inject
     public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) throws ClassNotFoundException, SQLException {
-        new org.mariadb.jdbc.Driver();
         this.proxy = proxy;
         this.logger = logger;
         this.metricsFactory = metricsFactory;
@@ -99,6 +98,8 @@ public class Main {
     public void loadDB() {
         if(mySQLHandler.conn != null)
             mySQLHandler.closeConnection();
+        else
+            new org.mariadb.jdbc.Driver();
         logger.info("Connecting to the database...");
         mySQLHandler.openConnection();
         try {
@@ -107,7 +108,7 @@ public class Main {
             else
                 logger.error("Failed connecting to the database.");
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Failed connecting to the database", e);
         }
     }
 
@@ -147,6 +148,9 @@ public class Main {
             metrics.addCustomChart(new SimplePie("autoupdater", () -> String.valueOf(configHandler.isBSTATS())));
             metrics.addCustomChart(new SimplePie("toplistLimit", () -> String.valueOf(configHandler.getTOPLIST_LIMIT())));
             metrics.addCustomChart(new SimplePie("cfgserializer", () -> String.valueOf(configHandler.isMinimessage())));
+            metrics.addCustomChart(new SimplePie("data_method", () -> configHandler.isDATABASE() ? "database" : "ymlfile"));
+            metrics.addCustomChart(new SimplePie("anti_spam", () -> configHandler.getSPAM_LIMIT() > 0 ? "true" : "false"));
+            metrics.addCustomChart(new SimplePie("rewards", () -> String.valueOf(configHandler.rewardsH.size())));
         }
 
         proxy.getEventManager().register(this, playtimeEvents);

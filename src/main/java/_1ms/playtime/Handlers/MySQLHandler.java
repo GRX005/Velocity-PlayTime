@@ -31,7 +31,7 @@ public class MySQLHandler {
             pstmt.setLong(3, time);
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException("Error while saving data into the database",e);
+            throw new RuntimeException("Error while saving data into the database", e);
         }
     }
 
@@ -44,7 +44,7 @@ public class MySQLHandler {
             }
             return -1;
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while reading data from the database", e);
         }
     }
 
@@ -54,7 +54,7 @@ public class MySQLHandler {
             while (rs.next())
                 playtimes.add(rs.getString("name"));
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while reading data from the database", e);
         }
         return playtimes.iterator();
     }
@@ -63,7 +63,7 @@ public class MySQLHandler {
         try(PreparedStatement pstmt = conn.prepareStatement("DELETE FROM playtimes")) {
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error while saving data into the database",e);
         }
     }
 

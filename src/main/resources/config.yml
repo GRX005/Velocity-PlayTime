@@ -21,6 +21,7 @@ Messages:
 Data:
   TOPLIST_LIMIT: 10
   BSTATS: true
+  #Ex: 1000 for 1 second.
   SPAM_LIMIT: 0
   #Choices are: "VANILLA" or "MINIMESSAGE". Use minimessage if you want gradients.
   CONFIG_SERIALIZER: VANILLA
@@ -41,7 +42,7 @@ Data:
     VIEW_OTHERS_TIME: false
     VIEW_TOPLIST: false
 
-#You can define your rewards under 'Rewards:' with the following format: 'playtime in milliseconds': command
+#You can define your rewards under 'Rewards:' with the following format: [space]'playtime in milliseconds': command
 #(1sec = 1000ms, you need to have one space at the start of very line)
 # '15000': lpv user %player% parent set group #Example command.
 Rewards:

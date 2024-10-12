@@ -11,6 +11,6 @@
 - PlaceholderAPI support through plugin channel syncing, using my PlaytimeLink plugin.
 - Playtime Rewards feature support.
 - MariaDB/MySQL Database Support.
-- Configurable antispam system.
+- Configurable Antispam system.
 
-For more info visit the SpigotMC page of the plugin: https://www.spigotmc.org/resources/playtime.117308/
+For more info, visit the SpigotMC page of the plugin: https://www.spigotmc.org/resources/playtime.117308/

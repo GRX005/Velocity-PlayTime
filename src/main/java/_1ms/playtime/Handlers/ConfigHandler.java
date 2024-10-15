@@ -59,6 +59,7 @@ public class ConfigHandler {
     private int PORT;
     private boolean DATABASE;
     private boolean BSTATS;
+    private boolean PRELOAD_PLACEHOLDERS;
     private boolean CHECK_FOR_UPDATES;
     private boolean USE_CACHE;
     private long CACHE_UPDATE_INTERVAL;
@@ -117,9 +118,9 @@ public class ConfigHandler {
         minimessage = config.getString("Data.CONFIG_SERIALIZER").equals("MINIMESSAGE");
         NO_PERMISSION = initComp("Messages.NO_PERMISSION");
         NO_CONSOLE_USE = initComp("Messages.NO_CONSOLE_USE");
-        YOUR_PLAYTIME = config.getString("Messages.YOUR_PLAYTIME");
+        YOUR_PLAYTIME = config.getString("Messages.PLAYTIME_YOURS");
         NO_PLAYER = initComp("Messages.NO_PLAYER");
-        OTHER_PLAYTIME = config.getString("Messages.OTHER_PLAYTIME");
+        OTHER_PLAYTIME = config.getString("Messages.PLAYTIME_OTHERS");
         CONFIG_RELOAD = initComp("Messages.CONFIG_RELOAD");
         PTRESET = config.getString("Messages.PTRESET");
         PTRESET_HELP = initComp("Messages.PTRESET_HELP");
@@ -127,7 +128,7 @@ public class ConfigHandler {
         PTRESETALL_CONFIRM = initComp("Messages.PTRESETALL_CONFIRM");
         INVALID_ARGS = initComp("Messages.INVALID_ARGS");
         TOP_PLAYTIME_HEADER = initComp("Messages.TOP_PLAYTIME_HEADER");
-        TOP_PLAYTIME_LIST = config.getString("Messages.TOP_PLAYTIME_LIST");
+        TOP_PLAYTIME_LIST = config.getString("Messages.TOP_PLAYTIME_VALUES");
         TOP_PLAYTIME_FOOTER = initComp("Messages.TOP_PLAYTIME_FOOTER");
         NO_SPAM = config.getString("Messages.NO_SPAM");
         SPAM_LIMIT = config.getInt("Data.SPAM_LIMIT");
@@ -159,6 +160,7 @@ public class ConfigHandler {
         CHECK_FOR_UPDATES = config.getBoolean("Data.CHECK_FOR_UPDATES");
         isDataFileUpToDate = config.getBoolean("isDataFileUpToDate");
         DATABASE = config.getString("Data.DATA_METHOD").equals("DATABASE");
+        PRELOAD_PLACEHOLDERS = config.getBoolean("Data.PRELOAD_PLACEHOLDERS");
         if(USE_CACHE)
             TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");
     }

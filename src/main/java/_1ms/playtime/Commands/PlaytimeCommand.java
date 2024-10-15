@@ -62,6 +62,8 @@ public class PlaytimeCommand implements SimpleCommand {
                     sender.sendMessage(configHandler.getNO_PLAYER());
                 } else {
                     String message = configHandler.getOTHER_PLAYTIME()
+                            .replace("%weeks%", String.valueOf(main.calculatePlayTime(PlayTime, 'w')))
+                            .replace("%days%", String.valueOf(main.calculatePlayTime(PlayTime, 'd')))
                             .replace("%hours%", String.valueOf(main.calculatePlayTime(PlayTime, 'h')))
                             .replace("%minutes%", String.valueOf(main.calculatePlayTime(PlayTime, 'm')))
                             .replace("%seconds%", String.valueOf(main.calculatePlayTime(PlayTime, 's')))
@@ -79,6 +81,8 @@ public class PlaytimeCommand implements SimpleCommand {
         }
         long PlayTime = main.GetPlayTime(player.getGameProfile().getName());
         String messageBegin = configHandler.getYOUR_PLAYTIME()
+                .replace("%weeks%", String.valueOf(main.calculatePlayTime(PlayTime, 'w')))
+                .replace("%days%", String.valueOf(main.calculatePlayTime(PlayTime, 'd')))
                 .replace("%hours%", String.valueOf(main.calculatePlayTime(PlayTime, 'h')))
                 .replace("%minutes%", String.valueOf(main.calculatePlayTime(PlayTime, 'm')))
                 .replace("%seconds%", String.valueOf(main.calculatePlayTime(PlayTime, 's')));

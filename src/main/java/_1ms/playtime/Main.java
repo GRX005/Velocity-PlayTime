@@ -5,8 +5,6 @@ import _1ms.playtime.Commands.*;
 import _1ms.playtime.Handlers.*;
 import _1ms.playtime.Listeners.PlaytimeEvents;
 import _1ms.playtime.Listeners.RequestHandler;
-import com.google.common.io.ByteArrayDataOutput;
-import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.velocitypowered.api.command.CommandManager;
 import com.velocitypowered.api.command.CommandMeta;
@@ -65,7 +63,7 @@ public class Main {
         cacheHandler = new CacheHandler(this, configHandler);
         playtimeEvents = new PlaytimeEvents(this, configHandler);
         playtimeTopCommand = new PlaytimeTopCommand(this, cacheHandler, configHandler);
-        requestHandler = new RequestHandler(this, playtimeTopCommand);
+        requestHandler = new RequestHandler(this, playtimeTopCommand, configHandler);
         dataConverter = new DataConverter(this, configHandler);
         configReload = new ConfigReload(configHandler);
         updateHandler = new UpdateHandler(this);
@@ -149,8 +147,9 @@ public class Main {
             metrics.addCustomChart(new SimplePie("toplistLimit", () -> String.valueOf(configHandler.getTOPLIST_LIMIT())));
             metrics.addCustomChart(new SimplePie("cfgserializer", () -> String.valueOf(configHandler.isMinimessage())));
             metrics.addCustomChart(new SimplePie("data_method", () -> configHandler.isDATABASE() ? "database" : "ymlfile"));
-            metrics.addCustomChart(new SimplePie("anti_spam", () -> configHandler.getSPAM_LIMIT() > 0 ? "true" : "false"));
+            metrics.addCustomChart(new SimplePie("anti_spam", () -> String.valueOf(configHandler.getSPAM_LIMIT())));
             metrics.addCustomChart(new SimplePie("rewards", () -> String.valueOf(configHandler.rewardsH.size())));
+            metrics.addCustomChart(new SimplePie("preload", () -> String.valueOf(configHandler.isPRELOAD_PLACEHOLDERS())));
         }
 
         proxy.getEventManager().register(this, playtimeEvents);
@@ -208,20 +207,7 @@ public class Main {
         SimpleCommand simpleCommand5 = playtimeResetAll;
         commandManager.register(commandMeta5, simpleCommand5);
 
-        @SuppressWarnings("UnstableApiUsage")
-        final ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("rs");
-        proxy.getAllServers().forEach(server -> checkServerStatus(server).thenAccept(status -> {
-            if(status){
-                proxy.getScheduler().buildTask(this, (task) -> {
-                    if(!server.getPlayersConnected().isEmpty()) {
-                        server.sendPluginMessage(MCI, out.toByteArray());
-                        task.cancel();
-                    }
-                }).repeat(1L, TimeUnit.SECONDS).schedule();
-            }
-        }));
-
+        requestHandler.sendRS();
 
         logger.info("Velocity PlayTime Loaded.");
     }
@@ -285,19 +271,14 @@ public class Main {
     }
 
     public long calculatePlayTime(long rawValue, char v) {
-        switch (v) {
-            case 'h' -> {
-                return rawValue / 3600000;
-            }
-            case 'm' -> {
-                return (rawValue % 3600000) / 60000;
-            }
-            case 's' -> {
-                return ((rawValue % 3600000) % 60000) / 1000;
-            }
-        }
-        logger.error("Error while Calculating Playtime.");
-        return 0;
+        return switch (v) {
+            case 'w' -> rawValue / 604800000;
+            case 'd' -> (rawValue % 604800000L) / 86400000;
+            case 'h' -> ((rawValue % 604800000L) % 86400000) / 3600000;
+            case 'm' -> (((rawValue % 604800000L) % 86400000) % 3600000) / 60000;
+            case 's' -> ((((rawValue % 604800000L) % 86400000) % 3600000) % 60000) / 1000;
+            default -> -1;
+        };
     }
 
 }

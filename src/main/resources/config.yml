@@ -1,11 +1,11 @@
 #Velocity playtime logger.
-file-version: 8
+file-version: 9
 isDataFileUpToDate: false
 Messages:
   NO_CONSOLE_USE: "The console doesn't have a playtime."
-  YOUR_PLAYTIME: "§aYour playtime: %hours% hours %minutes% minutes %seconds% secs."
+  PLAYTIME_YOURS: "§aYour playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs."
   NO_PLAYER: "§cNo player found with this name."
-  OTHER_PLAYTIME: "§a%player%'s playtime: %hours% hours %minutes% minutes %seconds% secs."
+  PLAYTIME_OTHERS: "§a%player%'s playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs."
   NO_PERMISSION: "§cYou don't have permission for this command."
   CONFIG_RELOAD: "§aThe config has been reloaded."
   PTRESET: "§a%player%'s playtime has been reset."
@@ -14,13 +14,15 @@ Messages:
   PTRESETALL_CONFIRM: "§aIf you are sure to delete every playtime, type /ptresetall confirm"
   INVALID_ARGS: "§cYou've entered invalid arguments."
   TOP_PLAYTIME_HEADER: "§aPlaytime toplist: "
-  TOP_PLAYTIME_LIST: "§a%player%: %hours% hours %minutes% minutes %seconds% secs."
+  TOP_PLAYTIME_VALUES: "§a%player%: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs."
   TOP_PLAYTIME_FOOTER: "§a----------------------"
   NO_SPAM: "§cDo not spam the command. You have to wait %seconds% secs to do that again."
 
 Data:
   TOPLIST_LIMIT: 10
   BSTATS: true
+  #If you are using placeholders with the PlaytimeLink plugin, and have issues with them, try enabling this.
+  PRELOAD_PLACEHOLDERS: false
   #Ex: 1000 for 1 second.
   SPAM_LIMIT: 0
   #Choices are: "VANILLA" or "MINIMESSAGE". Use minimessage if you want gradients.

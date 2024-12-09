@@ -3,48 +3,29 @@ package _1ms.playtime.Handlers;
 import _1ms.BuildConstants;
 import _1ms.playtime.Main;
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
+import com.google.gson.JsonArray;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 public class UpdateHandler {
-    private final Gson gson = new Gson();
     private final Main main;
 
     public UpdateHandler(Main main) {
         this.main = main;
     }
 
-    public void checkForUpdates() {
-        String currentVersion = BuildConstants.VERSION;
-        String latestVersion = getLatestVersion();
+    public void checkForUpdates() throws URISyntaxException, IOException, InterruptedException {
+        final String latestVersion = new Gson().fromJson(HttpClient.newHttpClient().send(HttpRequest.newBuilder().uri(new URI("https://api.modrinth.com/v2/project/playtime-velocity/version")).GET().build(),
+                HttpResponse.BodyHandlers.ofString()).body(), JsonArray.class).get(0).getAsJsonObject().get("version_number").getAsString();
 
-        if (latestVersion != null && !currentVersion.equals(latestVersion))
+        if (latestVersion != null && !BuildConstants.VERSION.equals(latestVersion))
             main.getLogger().warn("New version available: {}.", latestVersion);
         else
             main.getLogger().info("You are using the latest version.");
-    }
-
-    private String getLatestVersion() {
-        // Spigot resource ID
-        int resourceId = 117308;
-        String versionUrl = "https://api.spiget.org/v2/resources/" + resourceId + "/versions/latest";
-        try {
-            HttpURLConnection connection = (HttpURLConnection) new URL(versionUrl).openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(5000);
-            connection.setReadTimeout(5000);
-
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                JsonObject jsonObject = gson.fromJson(reader, JsonObject.class);
-                return jsonObject.get("name").getAsString().trim();
-            }
-        } catch (Exception e) {
-            main.getLogger().error("Failed to check for updates: {}", e.getMessage());
-            return null;
-        }
     }
 }

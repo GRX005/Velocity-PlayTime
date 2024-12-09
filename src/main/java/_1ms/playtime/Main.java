@@ -119,7 +119,11 @@ public class Main {
 //        if(updateHandler.checkForUpdates())
 //            return;
         if(configHandler.isCHECK_FOR_UPDATES())
-            proxy.getScheduler().buildTask(this, () -> updateHandler.checkForUpdates()).schedule();
+            proxy.getScheduler().buildTask(this, () -> {
+                try {
+                    updateHandler.checkForUpdates();
+                } catch (Exception ignored) {}
+            }).schedule();
 
         proxy.getChannelRegistrar().register(MCI);
 

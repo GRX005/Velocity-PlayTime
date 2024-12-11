@@ -66,17 +66,8 @@ public class PlaytimeTopCommand implements SimpleCommand {
 
             if(isForPlaceholder)
                 placeholderH.put(Entry.getKey(), playTime);
-            else {
-                final long pt = Entry.getValue();
-                String message = configHandler.getTOP_PLAYTIME_LIST()
-                        .replace("%player%", Entry.getKey())
-                        .replace("%weeks%", String.valueOf(main.calculatePlayTime(pt, 'w')))
-                        .replace("%days%", String.valueOf(main.calculatePlayTime(pt, 'd')))
-                        .replace("%hours%", String.valueOf(main.calculatePlayTime(pt, 'h')))
-                        .replace("%minutes%", String.valueOf(main.calculatePlayTime(pt, 'm')))
-                        .replace("%seconds%", String.valueOf(main.calculatePlayTime(pt, 's')));
-                invocation.source().sendMessage(configHandler.decideNonComponent(message));
-            }
+            else
+                invocation.source().sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getTOP_PLAYTIME_LIST(), playTime).replace("%player%", Entry.getKey())));
             TempCache.remove(Entry.getKey());
         }
         if(!isForPlaceholder)

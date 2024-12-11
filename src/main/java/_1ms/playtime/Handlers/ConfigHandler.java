@@ -184,8 +184,8 @@ public class ConfigHandler {
     }
 
     public long getPtFromConfig(String name) {
-        final Long pt = dataConfig.getLong("Player-Data." + name + ".playtime");
-        return pt != null ? pt : -1;
+        final Optional<Long> pt = dataConfig.getOptionalLong("Player-Data." + name + ".playtime");
+        return pt.isPresent() ? pt.get() : -1;
     }
 
     public void savePtToConfig(String name, long time) {
@@ -233,6 +233,18 @@ public class ConfigHandler {
 
     public Component decideNonComponent(String message) {
         return minimessage ? MiniMessage.miniMessage().deserialize(message) : Component.text(message);
+    }
+
+    public String repL(String msg, long PlayTime) {
+        return msg.replace("%weeks%", String.valueOf(main.calculatePlayTime(PlayTime, 'w')))
+                .replace("%days%", String.valueOf(main.calculatePlayTime(PlayTime, 'd')))
+                .replace("%hours%", String.valueOf(main.calculatePlayTime(PlayTime, 'h')))
+                .replace("%minutes%", String.valueOf(main.calculatePlayTime(PlayTime, 'm')))
+                .replace("%seconds%", String.valueOf(main.calculatePlayTime(PlayTime, 's')))
+                .replace("%totaldays%", String.valueOf(main.calcTotalPT(PlayTime, 'd')))
+                .replace("%totalhours%", String.valueOf(main.calcTotalPT(PlayTime, 'h')))
+                .replace("%totalminutes%", String.valueOf(main.calcTotalPT(PlayTime, 'm')))
+                .replace("%totalseconds%", String.valueOf(main.calcTotalPT(PlayTime, 's')));
     }
 
 }

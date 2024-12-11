@@ -247,7 +247,7 @@ public class Main {
     }
 
     public long GetPlayTime(String playerName) {
-        return playtimeCache.getOrDefault(playerName, 0L);
+        return playtimeCache.getOrDefault(playerName, -1L);
     }
 
     public long getSavedPt(String name) {
@@ -281,6 +281,16 @@ public class Main {
             case 'h' -> ((rawValue % 604800000L) % 86400000) / 3600000;
             case 'm' -> (((rawValue % 604800000L) % 86400000) % 3600000) / 60000;
             case 's' -> ((((rawValue % 604800000L) % 86400000) % 3600000) % 60000) / 1000;
+            default -> -1;
+        };
+    }
+
+    public long  calcTotalPT(long rawValue, char v) {
+        return switch (v) {
+            case 'd' -> rawValue / 86400000;
+            case 'h' -> rawValue / 3600000;
+            case 'm' -> rawValue / 60000;
+            case 's' -> rawValue / 1000;
             default -> -1;
         };
     }

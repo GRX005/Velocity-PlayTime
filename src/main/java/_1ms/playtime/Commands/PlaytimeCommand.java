@@ -58,18 +58,10 @@ public class PlaytimeCommand implements SimpleCommand {
                     return;
                 }
                 long PlayTime = main.playtimeCache.containsKey(args[0]) ? main.GetPlayTime(args[0]) : main.getSavedPt(args[0]);
-                if (PlayTime == 0) {
+                if (PlayTime == -1)
                     sender.sendMessage(configHandler.getNO_PLAYER());
-                } else {
-                    String message = configHandler.getOTHER_PLAYTIME()
-                            .replace("%weeks%", String.valueOf(main.calculatePlayTime(PlayTime, 'w')))
-                            .replace("%days%", String.valueOf(main.calculatePlayTime(PlayTime, 'd')))
-                            .replace("%hours%", String.valueOf(main.calculatePlayTime(PlayTime, 'h')))
-                            .replace("%minutes%", String.valueOf(main.calculatePlayTime(PlayTime, 'm')))
-                            .replace("%seconds%", String.valueOf(main.calculatePlayTime(PlayTime, 's')))
-                            .replace("%player%", args[0]);
-                    sender.sendMessage(configHandler.decideNonComponent(message));
-                }
+                else
+                    sender.sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getOTHER_PLAYTIME(), PlayTime).replace("%player%", args[0])));
             }
             default -> sender.sendMessage(configHandler.getINVALID_ARGS());
         }
@@ -79,14 +71,9 @@ public class PlaytimeCommand implements SimpleCommand {
             player.sendMessage(configHandler.getNO_PERMISSION());
             return;
         }
-        long PlayTime = main.GetPlayTime(player.getGameProfile().getName());
-        String messageBegin = configHandler.getYOUR_PLAYTIME()
-                .replace("%weeks%", String.valueOf(main.calculatePlayTime(PlayTime, 'w')))
-                .replace("%days%", String.valueOf(main.calculatePlayTime(PlayTime, 'd')))
-                .replace("%hours%", String.valueOf(main.calculatePlayTime(PlayTime, 'h')))
-                .replace("%minutes%", String.valueOf(main.calculatePlayTime(PlayTime, 'm')))
-                .replace("%seconds%", String.valueOf(main.calculatePlayTime(PlayTime, 's')));
-        player.sendMessage(configHandler.decideNonComponent(messageBegin));
+        final long PlayTime = main.GetPlayTime(player.getGameProfile().getName());
+
+        player.sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getYOUR_PLAYTIME(), PlayTime)));
     }
 
     @Override

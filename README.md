@@ -13,4 +13,4 @@
 - MariaDB/MySQL Database Support.
 - Configurable Antispam system.
 
-For more info, visit the SpigotMC page of the plugin: https://www.spigotmc.org/resources/playtime.117308/
+For more info, visit the modrinth page of the plugin: https://modrinth.com/plugin/playtime-velocity

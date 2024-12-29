@@ -54,8 +54,9 @@ public class RequestHandler {
     @Subscribe
     public EventTask onRequest(PluginMessageEvent e) {
         return EventTask.async(() -> {
-            if(!(e.getSource() instanceof ServerConnection conn) || e.getIdentifier() != main.MCI)
-                return;
+            if (e.getIdentifier() != main.MCI) return;
+            e.setResult(PluginMessageEvent.ForwardResult.handled());
+            if (!(e.getSource() instanceof ServerConnection conn)) return;
             final ByteArrayDataInput in = ByteStreams.newDataInput(e.getData());
             final String req = in.readUTF();
 

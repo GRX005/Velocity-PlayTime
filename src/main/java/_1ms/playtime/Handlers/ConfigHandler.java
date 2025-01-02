@@ -71,7 +71,7 @@ public class ConfigHandler {
     private long genTime;
     private long start;
 
-    public HashMap<Long, String> rewardsH = new HashMap<>();
+    public final HashMap<Long, String> rewardsH = new HashMap<>();
 
     public void initConfig(@DataDirectory Path dataDirectory) {
         try{
@@ -114,23 +114,27 @@ public class ConfigHandler {
         dataConfig.save();
     }
 
+    private String getConfStr(final String path) {
+        return config.getString(path).replace("\\n", "\n");
+    }
+
     public void makeConfigCache() {
         minimessage = config.getString("Data.CONFIG_SERIALIZER").equals("MINIMESSAGE");
         NO_PERMISSION = initComp("Messages.NO_PERMISSION");
         NO_CONSOLE_USE = initComp("Messages.NO_CONSOLE_USE");
-        YOUR_PLAYTIME = config.getString("Messages.PLAYTIME_YOURS");
+        YOUR_PLAYTIME = getConfStr("Messages.PLAYTIME_YOURS");
         NO_PLAYER = initComp("Messages.NO_PLAYER");
-        OTHER_PLAYTIME = config.getString("Messages.PLAYTIME_OTHERS");
+        OTHER_PLAYTIME = getConfStr("Messages.PLAYTIME_OTHERS");
         CONFIG_RELOAD = initComp("Messages.CONFIG_RELOAD");
-        PTRESET = config.getString("Messages.PTRESET");
+        PTRESET = getConfStr("Messages.PTRESET");
         PTRESET_HELP = initComp("Messages.PTRESET_HELP");
         PTRESETALL = initComp("Messages.PTRESETALL");
         PTRESETALL_CONFIRM = initComp("Messages.PTRESETALL_CONFIRM");
         INVALID_ARGS = initComp("Messages.INVALID_ARGS");
         TOP_PLAYTIME_HEADER = initComp("Messages.TOP_PLAYTIME_HEADER");
-        TOP_PLAYTIME_LIST = config.getString("Messages.TOP_PLAYTIME_VALUES");
+        TOP_PLAYTIME_LIST = getConfStr("Messages.TOP_PLAYTIME_VALUES");
         TOP_PLAYTIME_FOOTER = initComp("Messages.TOP_PLAYTIME_FOOTER");
-        NO_SPAM = config.getString("Messages.NO_SPAM");
+        NO_SPAM = getConfStr("Messages.NO_SPAM");
         SPAM_LIMIT = config.getInt("Data.SPAM_LIMIT");
         if(DATABASE) {
             ADDRESS = config.getString("Data.DATABASE.ADDRESS");
@@ -226,9 +230,8 @@ public class ConfigHandler {
         }
     }
 
-    private Component initComp(String path) {
-        final String message = config.getString(path);
-        return decideNonComponent(message);
+    private Component initComp(final String path) {
+        return decideNonComponent(config.getString(path).replace("\\n", "\n"));
     }
 
     public Component decideNonComponent(String message) {

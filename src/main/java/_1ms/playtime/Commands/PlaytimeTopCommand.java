@@ -14,7 +14,6 @@ public class PlaytimeTopCommand implements SimpleCommand {
     private final Main main;
     private final CacheHandler cacheHandler;
     private final ConfigHandler configHandler;
-    public final HashMap<String, Long> spamH = new HashMap<>();
 
     public PlaytimeTopCommand(Main main, CacheHandler cacheHandler, ConfigHandler configHandler) {
         this.main = main;
@@ -33,19 +32,8 @@ public class PlaytimeTopCommand implements SimpleCommand {
             sender.sendMessage(configHandler.getINVALID_ARGS());
             return;
         }
-        final long currT = System.currentTimeMillis();
-        if(!(configHandler.getSPAM_LIMIT() < 1) && sender instanceof Player player && !player.hasPermission("vpt.spam")) {
-            final String name = player.getUsername();
-            if(spamH.containsKey(name)) {
-                final long diffT = currT - spamH.get(name);
-                if(diffT < configHandler.getSPAM_LIMIT()) {
-                    final String msg = configHandler.getNO_SPAM().replace("%seconds%", String.valueOf(((configHandler.getSPAM_LIMIT()-diffT)/1000)+1));
-                    sender.sendMessage(configHandler.decideNonComponent(msg));
-                    return;
-                }
-            }
-            spamH.put(name, currT);
-        }
+        if(main.checkSpam(true, sender))
+            return;
         doSort(invocation);
     }
 
@@ -55,25 +43,28 @@ public class PlaytimeTopCommand implements SimpleCommand {
         final LinkedHashMap<String, Long> placeholderH  = new LinkedHashMap<>();
         if(!isForPlaceholder)
             invocation.source().sendMessage(configHandler.getTOP_PLAYTIME_HEADER());
+        int in = 0;
         for(int i = 0; i < configHandler.getTOPLIST_LIMIT(); i++) {
+            in++;
             Optional<Map.Entry<String, Long>> member = TempCache != null ? TempCache.entrySet().stream().max(Map.Entry.comparingByValue()) : Optional.empty();
             if(member.isEmpty())
                 break;
             Map.Entry<String, Long> Entry = member.get();
             long playTime = Entry.getValue();
             if(playTime == 0)
-               continue;
+                continue;
 
             if(isForPlaceholder)
                 placeholderH.put(Entry.getKey(), playTime);
             else
-                invocation.source().sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getTOP_PLAYTIME_LIST(), playTime).replace("%player%", Entry.getKey())));
+                invocation.source().sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getTOP_PLAYTIME_LIST(), playTime).replace("%player%", Entry.getKey()).replace("%place%", String.valueOf(in))));
             TempCache.remove(Entry.getKey());
         }
         if(!isForPlaceholder)
             invocation.source().sendMessage(configHandler.getTOP_PLAYTIME_FOOTER());
         return placeholderH;
     }
+
 
     public HashMap<String, Long> getInRuntime() {
         Iterator<Object> iterator = main.getIterator();
@@ -104,12 +95,12 @@ public class PlaytimeTopCommand implements SimpleCommand {
                 ad.ifPresentOrElse(Entry -> {
                     if(TempCache.size() >= configHandler.getTOPLIST_LIMIT()) {
                         if (Entry.getValue() < Long) {
-                            TempCache.put(player1.getGameProfile().getName(), Long);
+                            TempCache.put(player1.getUsername(), Long);
                             TempCache.remove(Entry.getKey());
                         }
                     }else
-                        TempCache.put(player1.getGameProfile().getName(), Long);
-                }, () -> TempCache.put(player1.getGameProfile().getName(), Long));
+                        TempCache.put(player1.getUsername(), Long);
+                }, () -> TempCache.put(player1.getUsername(), Long));
             });
         });
         return TempCache;

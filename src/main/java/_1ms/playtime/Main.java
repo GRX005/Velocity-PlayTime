@@ -26,10 +26,7 @@ import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -55,6 +52,9 @@ public class Main {
     public PlaytimeResetAll playtimeResetAll;
     public MySQLHandler mySQLHandler;
     public final MinecraftChannelIdentifier MCI = MinecraftChannelIdentifier.from("velocity:playtime");
+
+    private final HashMap<String, Long> topSpamH = new HashMap<>();
+    private final HashMap<String, Long> spamH = new HashMap<>();
 
     public void InitInstance() {
         configHandler = new ConfigHandler(this);
@@ -82,7 +82,7 @@ public class Main {
     private final Metrics.Factory metricsFactory;
 
     @Inject
-    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) throws ClassNotFoundException, SQLException {
+    public Main(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
         this.proxy = proxy;
         this.logger = logger;
         this.metricsFactory = metricsFactory;
@@ -110,8 +110,9 @@ public class Main {
         }
     }
 
-    private void checkSpamH(HashMap<String, Long> spamH) {
+    private void checkSpamH() {
         spamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue()) > configHandler.getSPAM_LIMIT() + 5000);
+        topSpamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue()) > configHandler.getSPAM_LIMIT() + 5000);
     }
 
     @Subscribe
@@ -134,8 +135,7 @@ public class Main {
             cacheHandler.buildCache();
             proxy.getScheduler().buildTask(this, () -> {
                 cacheHandler.updateCache();
-                checkSpamH(playtimeTopCommand.spamH);
-                checkSpamH(playtimeCommand.spamH);
+                checkSpamH();
             }).repeat(configHandler.getCACHE_UPDATE_INTERVAL(), TimeUnit.MILLISECONDS).schedule();
         }
 
@@ -160,9 +160,9 @@ public class Main {
         proxy.getEventManager().register(this, requestHandler);
 
         proxy.getScheduler()
-                .buildTask(this, () -> {
+                .buildTask(this, () -> {//Playtime counting happens here.
                     for(Player player : proxy.getAllPlayers()) {
-                        final String name = player.getGameProfile().getName();
+                        final String name = player.getUsername();
                         final long playTime = GetPlayTime(name);
                         playtimeCache.put(name, playTime + 1000L);
                         configHandler.rewardsH.keySet().forEach(key -> {
@@ -232,14 +232,14 @@ public class Main {
         final List<String> tabargs = new ArrayList<>();
         try {
             for (Player player : proxy.getAllPlayers()) {
-                if (!player.equals(sender) && player.getGameProfile().getName().toLowerCase().startsWith(target[0].toLowerCase())) {
-                    tabargs.add(player.getGameProfile().getName());
+                if (!player.equals(sender) && player.getUsername().toLowerCase().startsWith(target[0].toLowerCase())) {
+                    tabargs.add(player.getUsername());
                 }
             }
         } catch (Exception ignored) {
             for (Player player : proxy.getAllPlayers()) {
                 if (!player.equals(sender)) {
-                    tabargs.add(player.getGameProfile().getName());
+                    tabargs.add(player.getUsername());
                 }
             }
         }
@@ -274,6 +274,24 @@ public class Main {
         return configHandler.isDATABASE() ? mySQLHandler.getIterator() : configHandler.getConfigIterator("Player-Data", true);
     }
 
+    public boolean checkSpam(boolean isTop, CommandSource sender) {
+        final long currT = System.currentTimeMillis();
+        if(!(configHandler.getSPAM_LIMIT() < 1) && sender instanceof Player player && !player.hasPermission("vpt.spam")) {
+            final String name = player.getUsername();
+            HashMap<String, Long> tSpam = isTop ? topSpamH : spamH;
+            if(tSpam.containsKey(name)) {
+                final long diffT = currT - tSpam.get(name);
+                if(diffT < configHandler.getSPAM_LIMIT()) {
+                    final String msg = configHandler.getNO_SPAM().replace("%seconds%", String.valueOf(((configHandler.getSPAM_LIMIT()-diffT)/1000)+1));
+                    sender.sendMessage(configHandler.decideNonComponent(msg));
+                    return true;
+                }
+            }
+            tSpam.put(name, currT);
+        }
+        return false;
+    }
+
     public long calculatePlayTime(long rawValue, char v) {
         return switch (v) {
             case 'w' -> rawValue / 604800000;
@@ -285,7 +303,7 @@ public class Main {
         };
     }
 
-    public long  calcTotalPT(long rawValue, char v) {
+    public long calcTotalPT(long rawValue, char v) {
         return switch (v) {
             case 'd' -> rawValue / 86400000;
             case 'h' -> rawValue / 3600000;
@@ -293,6 +311,17 @@ public class Main {
             case 's' -> rawValue / 1000;
             default -> -1;
         };
+    }
+
+    public int getPlace(String pName) {//Check if the cache contains it.
+        final LinkedHashMap<String, Long> tl = playtimeCache.containsKey(pName) ? playtimeTopCommand.doSort(null) : requestHandler.getFullTL();
+        int i = 0;
+        for(String pl : tl.keySet()) {
+            i++;
+            if(pName.equals(pl))
+                return i;
+        }
+        return -1;
     }
 
 }

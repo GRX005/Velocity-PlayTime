@@ -13,7 +13,6 @@ public class MySQLHandler {
     }
 
     public Connection conn;
-    //TODO CONFIGBÓL
     public void openConnection() {
         final String url = "jdbc:mariadb://" + configHandler.getADDRESS() +":" + configHandler.getPORT() + "/" + configHandler.getDB_NAME() + "?user=" + configHandler.getUSERNAME() + "&password=" + configHandler.getPASSWORD() + "&driver=org.mariadb.jdbc.Driver";
         try {
@@ -31,6 +30,11 @@ public class MySQLHandler {
             pstmt.setLong(3, time);
             pstmt.executeUpdate();
         } catch (SQLException e) {
+            if(e instanceof SQLNonTransientConnectionException) {
+                openConnection();
+                saveData(name, time);
+                return;
+            }
             throw new RuntimeException("Error while saving data into the database", e);
         }
     }
@@ -44,6 +48,10 @@ public class MySQLHandler {
             }
             return -1;
         } catch (SQLException e) {
+            if(e instanceof SQLNonTransientConnectionException) {
+                openConnection();
+                return readData(name);
+            }
             throw new RuntimeException("Error while reading data from the database", e);
         }
     }
@@ -54,6 +62,11 @@ public class MySQLHandler {
             while (rs.next())
                 playtimes.add(rs.getString("name"));
         } catch (SQLException e) {
+            if(e instanceof SQLNonTransientConnectionException) {
+                openConnection();
+                getIterator();
+                return getIterator();
+            }
             throw new RuntimeException("Error while reading data from the database", e);
         }
         return playtimes.iterator();
@@ -63,6 +76,11 @@ public class MySQLHandler {
         try(PreparedStatement pstmt = conn.prepareStatement("DELETE FROM playtimes")) {
             pstmt.executeUpdate();
         } catch (SQLException e) {
+            if(e instanceof SQLNonTransientConnectionException) {
+                openConnection();
+                deleteAll();
+                return;
+            }
             throw new RuntimeException("Error while saving data into the database",e);
         }
     }

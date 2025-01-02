@@ -21,7 +21,7 @@ public class PlaytimeEvents {
     @Subscribe
     public EventTask onConnect(PostLoginEvent e) {
         return EventTask.async(() -> {
-            String playerName = e.getPlayer().getGameProfile().getName();
+            String playerName = e.getPlayer().getUsername();
             if(!main.playtimeCache.containsKey(playerName)) {
                 long playtime = main.getSavedPt(playerName);
                 if (playtime == -1) {
@@ -36,7 +36,7 @@ public class PlaytimeEvents {
     @Subscribe
     public EventTask onLeave(DisconnectEvent e) {
         return EventTask.async(() -> {
-            final String playerName = e.getPlayer().getGameProfile().getName();
+            final String playerName = e.getPlayer().getUsername();
             final long playerTime = main.GetPlayTime(playerName);
             main.savePt(playerName, playerTime);
             if(!configHandler.isUSE_CACHE())

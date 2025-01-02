@@ -18,19 +18,18 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @SuppressWarnings({"UnstableApiUsage", "unused"})
 public class RequestHandler {
 
     private final Main main;
-    private final PlaytimeTopCommand playtimeTopCommand;
     private final ConfigHandler configHandler;
     private final Gson gson = new Gson();
     private ScheduledTask task;
     private final HashMap<RegisteredServer, ScheduledTask> rsTasks = new HashMap<>();
     public RequestHandler(Main main, PlaytimeTopCommand playtimeTopCommand, ConfigHandler configHandler) {
         this.main = main;
-        this.playtimeTopCommand = playtimeTopCommand;
         this.configHandler = configHandler;
     }
     private final Set<RegisteredServer> pttServers = new HashSet<>();
@@ -97,21 +96,22 @@ public class RequestHandler {
                     final AtomicReference<RegisteredServer> serverRef = new AtomicReference<>(server22);
 
                     final AtomicLong currt = new AtomicLong(System.currentTimeMillis());
-                    main.getProxy().getScheduler().buildTask(main, (taskIn) -> {
+                    main.getProxy().getScheduler().buildTask(main, taskIn -> {
                         final long rCurrt = System.currentTimeMillis();
-                        if((rCurrt - currt.get()) > 10000 ) {
+                        if ((rCurrt - currt.get()) > 10000) { // Check if the server is still running & doesn't request ptt every 10 secs.
                             currt.set(rCurrt);
                             main.checkServerStatus(serverRef.get()).thenAccept(status -> {
-                                if(!status) {
+                                if(!status) //If the server gets stopped before 10 secs of it being started.
+                                    pttServers.removeIf(serv -> serv.equals(serverRef.get()));
+                                if (!status || pttServers.contains(serverRef.get())) {
                                     taskIn.cancel();
                                     ptServers.remove(serverRef.get());
-                                    pttServers.removeIf(asd -> asd.equals(serverRef.get()));
                                 }
                             });
                         }
                         final HashMap<String, Long> pTempMap = new HashMap<>();
                         serverRef.get().getPlayersConnected().forEach(player -> {
-                            final String name = player.getGameProfile().getName();
+                            final String name = player.getUsername();
                             pTempMap.put(name, main.playtimeCache.get(name));
                         });
                         final ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -123,14 +123,22 @@ public class RequestHandler {
                 case "rtl" -> {
                     pttServers.add(conn.getServer());
                     if(task == null) {
+                        final AtomicLong currt = new AtomicLong(System.currentTimeMillis());
                         task = main.getProxy().getScheduler().buildTask(main, () -> {
+                            final long rCurrt = System.currentTimeMillis();
+                            if ((rCurrt - currt.get()) > 10000) { // Check if the server is still running every 10 secs.
+                                currt.set(rCurrt);
+                                pttServers.forEach(server -> main.checkServerStatus(server).thenAccept(status -> {
+                                    if(!status)
+                                        pttServers.remove(server);
+                                }));
+                            }
                             if(pttServers.isEmpty()) {
                                 task.cancel();
                                 task = null;
                                 return;
                             }
-                            final LinkedHashMap<String, Long> topMap = playtimeTopCommand.doSort(null);
-                            final String json = gson.toJson(topMap);
+                            final String json = gson.toJson(getFullTL());
                             final ByteArrayDataOutput out = ByteStreams.newDataOutput();
                             out.writeUTF("ptt");
                             out.writeUTF(json);
@@ -140,5 +148,23 @@ public class RequestHandler {
                 }
             }
         });
+    }
+
+    public LinkedHashMap<String, Long> getFullTL() {
+        final HashMap<String, Long> pTempMap = new HashMap<>(main.playtimeCache);
+
+        main.getIterator().forEachRemaining(player -> {
+            if(!pTempMap.containsKey((String)player)) {
+                pTempMap.put((String)player, main.getSavedPt((String)player));
+            }
+        });
+
+        return pTempMap.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()) // Sort by pt
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue,
+                        (e1, e2) -> e1,
+                        LinkedHashMap::new));
     }
 }

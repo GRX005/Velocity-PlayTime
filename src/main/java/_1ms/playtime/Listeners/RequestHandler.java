@@ -16,6 +16,7 @@ import com.velocitypowered.api.scheduler.ScheduledTask;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -38,11 +39,14 @@ public class RequestHandler {
     public void sendRS() {
         @SuppressWarnings("UnstableApiUsage")
         final ByteArrayDataOutput out = ByteStreams.newDataOutput();
-        out.writeUTF("rs");
+        out.writeUTF("rs"); //Notify ptlink that the proxy restarted.
         main.getProxy().getAllServers().forEach(server -> main.checkServerStatus(server).thenAccept(status -> {
             if(status){
-                rsTasks.put(server, main.getProxy().getScheduler().buildTask(main, () -> {
+                AtomicInteger limit = new AtomicInteger(0);
+                rsTasks.put(server, main.getProxy().getScheduler().buildTask(main, (rsTask) -> {
                     if(!server.getPlayersConnected().isEmpty()) {
+                        if(5 == limit.incrementAndGet()) //Only send it 5 times at max.
+                            rsTask.cancel();
                         server.sendPluginMessage(main.MCI, out.toByteArray());
                     }
                 }).repeat(1L, TimeUnit.SECONDS).schedule());
@@ -98,7 +102,7 @@ public class RequestHandler {
                     final AtomicLong currt = new AtomicLong(System.currentTimeMillis());
                     main.getProxy().getScheduler().buildTask(main, taskIn -> {
                         final long rCurrt = System.currentTimeMillis();
-                        if ((rCurrt - currt.get()) > 10000) { // Check if the server is still running & doesn't request ptt every 10 secs.
+                        if ((rCurrt - currt.get()) > 10000) { // Check if the server is still running & doesn't request ptt, every 10 secs.
                             currt.set(rCurrt);
                             main.checkServerStatus(serverRef.get()).thenAccept(status -> {
                                 if(!status) //If the server gets stopped before 10 secs of it being started.

@@ -93,6 +93,4 @@ public class MySQLHandler {
             throw new RuntimeException("Error while closing connection with the database", e);
         }
     }
-
-
 }

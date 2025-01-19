@@ -1,7 +1,10 @@
 package _1ms.playtime;
 
 import _1ms.BuildConstants;
-import _1ms.playtime.Commands.*;
+import _1ms.playtime.Commands.ConfigReload;
+import _1ms.playtime.Commands.PlaytimeCommand;
+import _1ms.playtime.Commands.PlaytimeResetAll;
+import _1ms.playtime.Commands.PlaytimeTopCommand;
 import _1ms.playtime.Handlers.*;
 import _1ms.playtime.Listeners.PlaytimeEvents;
 import _1ms.playtime.Listeners.RequestHandler;
@@ -22,6 +25,7 @@ import com.velocitypowered.api.proxy.server.RegisteredServer;
 import lombok.Getter;
 import org.bstats.charts.SimplePie;
 import org.bstats.velocity.Metrics;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
@@ -48,7 +52,6 @@ public class Main {
     public DataConverter dataConverter;
     public ConfigReload configReload;
     public UpdateHandler updateHandler;
-    public PlaytimeReset playtimeReset;
     public PlaytimeResetAll playtimeResetAll;
     public MySQLHandler mySQLHandler;
     public final MinecraftChannelIdentifier MCI = MinecraftChannelIdentifier.from("velocity:playtime");
@@ -59,15 +62,14 @@ public class Main {
     public void InitInstance() {
         configHandler = new ConfigHandler(this);
         mySQLHandler = new MySQLHandler(configHandler);
-        playtimeCommand = new PlaytimeCommand(this, configHandler);
         cacheHandler = new CacheHandler(this, configHandler);
+        playtimeCommand = new PlaytimeCommand(this, configHandler, cacheHandler);
         playtimeEvents = new PlaytimeEvents(this, configHandler);
-        playtimeTopCommand = new PlaytimeTopCommand(this, cacheHandler, configHandler);
+        playtimeTopCommand = new PlaytimeTopCommand(this, configHandler);
         requestHandler = new RequestHandler(this, playtimeTopCommand, configHandler);
         dataConverter = new DataConverter(this, configHandler);
         configReload = new ConfigReload(configHandler);
         updateHandler = new UpdateHandler(this);
-        playtimeReset = new PlaytimeReset(this, configHandler, cacheHandler);
         playtimeResetAll = new PlaytimeResetAll(this, configHandler);
     }
 
@@ -140,8 +142,7 @@ public class Main {
         }
 
         if(configHandler.isBSTATS()) {
-            int pluginID = 22432;
-            Metrics metrics = metricsFactory.make(this, pluginID);
+            final Metrics metrics = metricsFactory.make(this, 22432);
 
             metrics.addCustomChart(new SimplePie("uses_cache", () -> configHandler.isUSE_CACHE() ? "true" : "false"));
             metrics.addCustomChart(new SimplePie("perms_usage", () -> configHandler.getPermsUsageCount()));
@@ -163,12 +164,14 @@ public class Main {
                 .buildTask(this, () -> {//Playtime counting happens here.
                     for(Player player : proxy.getAllPlayers()) {
                         final String name = player.getUsername();
-                        final long playTime = GetPlayTime(name);
+                        final long playTime = playtimeCache.getOrDefault(name, 0L);
                         playtimeCache.put(name, playTime + 1000L);
-                        configHandler.rewardsH.keySet().forEach(key -> {
-                            if(key == playTime) {
-                                proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), configHandler.rewardsH.get(key).replace("%player%", name));
-                            }
+                        configHandler.rewardsH.keySet().forEach(key -> { //And rewards
+                            try {
+                                if(key == playTime && !proxy.getPlayer(name).get().hasPermission("vpt.rewards.exempt")) {
+                                    proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), configHandler.rewardsH.get(key).replace("%player%", name));
+                                }
+                            }catch (Exception ignored) {}
                         });
                     }
                 })
@@ -197,19 +200,12 @@ public class Main {
         SimpleCommand simpleCommand3 = configReload;
         commandManager.register(commandMeta3, simpleCommand3);
 
-        CommandMeta commandMeta4 = commandManager.metaBuilder("playtimereset")
-                .aliases( "ptr", "ptreset")
-                .plugin(this)
-                .build();
-        SimpleCommand simpleCommand4 = playtimeReset;
-        commandManager.register(commandMeta4, simpleCommand4);
-
-        CommandMeta commandMeta5 = commandManager.metaBuilder("playtimeresetall")
+        CommandMeta commandMeta4 = commandManager.metaBuilder("playtimeresetall")
                 .aliases( "ptra", "ptresetall")
                 .plugin(this)
                 .build();
-        SimpleCommand simpleCommand5 = playtimeResetAll;
-        commandManager.register(commandMeta5, simpleCommand5);
+        SimpleCommand simpleCommand4 = playtimeResetAll;
+        commandManager.register(commandMeta4, simpleCommand4);
 
         requestHandler.sendRS();
 
@@ -230,15 +226,16 @@ public class Main {
 
     public List<String> calcTab(CommandSource sender, String[] target) {
         final List<String> tabargs = new ArrayList<>();
-        try {
+        if(target.length == 0) {
+            for (Player player : proxy.getAllPlayers()) {
+                if (!player.equals(sender))
+                    tabargs.add(player.getUsername());
+            }
+            return tabargs;
+        }
+        if(target.length == 1) {
             for (Player player : proxy.getAllPlayers()) {
                 if (!player.equals(sender) && player.getUsername().toLowerCase().startsWith(target[0].toLowerCase())) {
-                    tabargs.add(player.getUsername());
-                }
-            }
-        } catch (Exception ignored) {
-            for (Player player : proxy.getAllPlayers()) {
-                if (!player.equals(sender)) {
                     tabargs.add(player.getUsername());
                 }
             }
@@ -246,7 +243,7 @@ public class Main {
         return tabargs;
     }
 
-    public long GetPlayTime(String playerName) {
+    public long getPlayTime(String playerName) {
         return playtimeCache.getOrDefault(playerName, -1L);
     }
 
@@ -314,7 +311,14 @@ public class Main {
     }
 
     public int getPlace(String pName) {//Check if the cache contains it.
-        final LinkedHashMap<String, Long> tl = playtimeCache.containsKey(pName) ? playtimeTopCommand.doSort(null) : requestHandler.getFullTL();
+        LinkedHashMap<String, Long> tl;
+        if(playtimeCache.containsKey(pName)) {
+            tl = doSort(null);
+            if ((long) tl.values().toArray()[tl.size() - 1] > getPlayTime(pName))
+                tl = requestHandler.getFullTL();
+        }
+        else
+            tl = requestHandler.getFullTL();
         int i = 0;
         for(String pl : tl.keySet()) {
             i++;
@@ -322,6 +326,34 @@ public class Main {
                 return i;
         }
         return -1;
+    }
+
+    public LinkedHashMap<String, Long> doSort(@Nullable SimpleCommand.Invocation invocation) {
+        final HashMap<String, Long> TempCache = configHandler.isUSE_CACHE() ? cacheHandler.generateTempCache() : playtimeTopCommand.getInRuntime();
+        final boolean isForPlaceholder = invocation == null;
+        final LinkedHashMap<String, Long> placeholderH  = new LinkedHashMap<>();
+        if(!isForPlaceholder)
+            invocation.source().sendMessage(configHandler.getTOP_PLAYTIME_HEADER());
+        int in = 0;
+        for(int i = 0; i < configHandler.getTOPLIST_LIMIT(); i++) {
+            in++;
+            Optional<Map.Entry<String, Long>> member = TempCache != null ? TempCache.entrySet().stream().max(Map.Entry.comparingByValue()) : Optional.empty();
+            if(member.isEmpty())
+                break;
+            Map.Entry<String, Long> Entry = member.get();
+            long playTime = Entry.getValue();
+            if(playTime == 0)
+                continue;
+
+            if(isForPlaceholder)
+                placeholderH.put(Entry.getKey(), playTime);
+            else
+                invocation.source().sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getTOP_PLAYTIME_LIST(), playTime).replace("%player%", Entry.getKey()).replace("%place%", String.valueOf(in))));
+            TempCache.remove(Entry.getKey());
+        }
+        if(!isForPlaceholder)
+            invocation.source().sendMessage(configHandler.getTOP_PLAYTIME_FOOTER());
+        return placeholderH;
     }
 
 }

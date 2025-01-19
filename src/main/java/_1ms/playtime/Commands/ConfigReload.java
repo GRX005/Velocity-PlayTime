@@ -11,7 +11,6 @@ public class ConfigReload implements SimpleCommand {
         this.configHandler = configHandler;
     }
 
-
     @Override
     public void execute(Invocation invocation) {
         CommandSource sender = invocation.source();
@@ -27,5 +26,4 @@ public class ConfigReload implements SimpleCommand {
         configHandler.reloadConfig();
         sender.sendMessage(configHandler.getCONFIG_RELOAD());
     }
-
 }

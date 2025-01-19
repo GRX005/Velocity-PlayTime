@@ -43,6 +43,7 @@ public class ConfigHandler {
     private Component PTRESET_HELP;
     private Component PTRESETALL;
     private Component PTRESETALL_CONFIRM;
+    private String PTSET;
     private Component INVALID_ARGS;
     private Component TOP_PLAYTIME_HEADER;
     private String TOP_PLAYTIME_LIST;
@@ -52,6 +53,7 @@ public class ConfigHandler {
     private String DB_NAME;
     private String USERNAME;
     private String PASSWORD;
+    private Component INVALID_VALUE;
 
 
     private int TOPLIST_LIMIT;
@@ -130,12 +132,14 @@ public class ConfigHandler {
         PTRESET_HELP = initComp("Messages.PTRESET_HELP");
         PTRESETALL = initComp("Messages.PTRESETALL");
         PTRESETALL_CONFIRM = initComp("Messages.PTRESETALL_CONFIRM");
+        PTSET = getConfStr("Messages.PTSET");
         INVALID_ARGS = initComp("Messages.INVALID_ARGS");
         TOP_PLAYTIME_HEADER = initComp("Messages.TOP_PLAYTIME_HEADER");
         TOP_PLAYTIME_LIST = getConfStr("Messages.TOP_PLAYTIME_VALUES");
         TOP_PLAYTIME_FOOTER = initComp("Messages.TOP_PLAYTIME_FOOTER");
         NO_SPAM = getConfStr("Messages.NO_SPAM");
         SPAM_LIMIT = config.getInt("Data.SPAM_LIMIT");
+        INVALID_VALUE = initComp("Messages.INVALID_VALUE");
         if(DATABASE) {
             ADDRESS = config.getString("Data.DATABASE.ADDRESS");
             PORT  = config.getInt("Data.DATABASE.PORT");
@@ -230,11 +234,11 @@ public class ConfigHandler {
         }
     }
 
-    private Component initComp(final String path) {
+    private Component initComp(final String path) { //Req from the conf file, only at startup once
         return decideNonComponent(config.getString(path).replace("\\n", "\n"));
     }
 
-    public Component decideNonComponent(String message) {
+    public Component decideNonComponent(String message) {//Use to decide in runtime where replacements are needed.
         return minimessage ? MiniMessage.miniMessage().deserialize(message) : Component.text(message);
     }
 

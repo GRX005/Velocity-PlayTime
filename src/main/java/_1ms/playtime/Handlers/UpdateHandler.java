@@ -22,7 +22,6 @@ public class UpdateHandler {
     public void checkForUpdates() throws URISyntaxException, IOException, InterruptedException {
         final String latestVersion = new Gson().fromJson(HttpClient.newHttpClient().send(HttpRequest.newBuilder().uri(new URI("https://api.modrinth.com/v2/project/playtime-velocity/version")).GET().build(),
                 HttpResponse.BodyHandlers.ofString()).body(), JsonArray.class).get(0).getAsJsonObject().get("version_number").getAsString();
-
         if (latestVersion != null && !BuildConstants.VERSION.equals(latestVersion))
             main.getLogger().warn("New version available: {}.", latestVersion);
         else

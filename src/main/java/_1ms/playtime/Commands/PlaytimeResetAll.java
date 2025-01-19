@@ -44,9 +44,8 @@ public class PlaytimeResetAll implements SimpleCommand {
                     if (player.isPresent()) {
                         main.playtimeCache.replace(pname, 0L);
                         return false;
-                    } else {
+                    } else
                         return true;
-                    }
                 });
                 sender.sendMessage(configHandler.getPTRESETALL());
             }

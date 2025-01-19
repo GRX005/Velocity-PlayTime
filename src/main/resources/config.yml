@@ -1,5 +1,5 @@
 #Velocity playtime logger.
-file-version: 9
+file-version: 10
 isDataFileUpToDate: false
 Messages:
   NO_CONSOLE_USE: "The console doesn't have a playtime."
@@ -12,11 +12,13 @@ Messages:
   PTRESET_HELP: "§a/playtimereset [player]"
   PTRESETALL: "§aAll playtimes have been reset."
   PTRESETALL_CONFIRM: "§aIf you are sure to delete every playtime, type /ptresetall confirm"
+  PTSET: "§aSet %player%'s playtime to %ms% ms."
   INVALID_ARGS: "§cYou've entered invalid arguments."
   TOP_PLAYTIME_HEADER: "§aPlaytime toplist: "
   TOP_PLAYTIME_VALUES: "§3%place%.: §a%player%: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs."
-  TOP_PLAYTIME_FOOTER: "§a----------------------"
+  TOP_PLAYTIME_FOOTER: "§a-------------------------------------"
   NO_SPAM: "§cDo not spam the command. You have to wait %seconds% secs to do that again."
+  INVALID_VALUE: "§cYou've entered an invalid value."
 
 Data:
   TOPLIST_LIMIT: 10

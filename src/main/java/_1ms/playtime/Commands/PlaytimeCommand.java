@@ -47,7 +47,7 @@ public class PlaytimeCommand implements SimpleCommand {
                     sender.sendMessage(configHandler.getNO_PERMISSION());
                     return;
                 }
-                long PlayTime = main.playtimeCache.containsKey(args[0]) ? main.getPlayTime(args[0]) : main.getSavedPt(args[0]);
+                long PlayTime = main.playtimeCache.containsKey(args[0]) ? main.playtimeCache.get(args[0]) : main.getSavedPt(args[0]);
                 if (PlayTime == -1)
                     sender.sendMessage(configHandler.getNO_PLAYER());
                 else
@@ -70,18 +70,21 @@ public class PlaytimeCommand implements SimpleCommand {
                 switch (args[0]) {
                     case "add" -> {//pt add %player% %time%
                         long val;
+                        long beforePt;
                         if(main.playtimeCache.containsKey(args[1])) {//In cache
-                            val = main.playtimeCache.get(args[1])+num;
+                            beforePt = main.playtimeCache.get(args[1]);
+                            val = beforePt+num;
                             main.playtimeCache.replace(args[1], val);
                         } else {
-                            final long pt = main.getSavedPt(args[1]);//Config if not
-                            if(pt == -1) {
+                            beforePt = main.getSavedPt(args[1]);//Config if not
+                            if(beforePt == -1) {
                                 sender.sendMessage(configHandler.getNO_PLAYER());
                                 return;
                             }
-                            val = pt+num;
+                            val = beforePt+num;
                             main.savePt(args[1], val);
                         }
+                        checkRewards(args[1], beforePt, val);
                         sendModMsg(val, sender, args[1]);
                     }
                     case "sub" -> {
@@ -109,16 +112,37 @@ public class PlaytimeCommand implements SimpleCommand {
                         sendModMsg(val, sender, args[1]);
                     }
                     case "set" -> {
-                        if(main.playtimeCache.containsKey(args[1]))//In cache
+                        long beforePt;
+                        if(main.playtimeCache.containsKey(args[1])) {//In cache
+                            beforePt = main.playtimeCache.get(args[1]);
                             handleCache(args[1], num);
-                        else
+                        }
+                        else {
+                            beforePt = main.getSavedPt(args[1]);
+                            if(beforePt == -1)
+                                beforePt = 0;
                             main.savePt(args[1], num);
+                        }
+                        if(beforePt < num)
+                            checkRewards(args[1], beforePt, num);
                         sendModMsg(num, sender, args[1]);
                     }
                 }
             }
             default -> sender.sendMessage(configHandler.getINVALID_ARGS());
         }
+    }
+
+    private void checkRewards(String pname, long beforePt, long afterPt) {
+        configHandler.getRewardsH().forEach((key, value) -> { //Check rewards on PT ADD
+            try {
+                if(beforePt < key && key <= afterPt && !main.getProxy().getPlayer(pname).get().hasPermission("vpt.rewards.exempt"))
+                    main.getProxy().getCommandManager().executeAsync(main.getProxy().getConsoleCommandSource(), value.replace("%player%", pname));
+            } catch (Exception ignored) {
+                if(configHandler.isOFFLINES_SHOULD_GET_REWARDS())
+                    main.getProxy().getCommandManager().executeAsync(main.getProxy().getConsoleCommandSource(), value.replace("%player%", pname));
+            }
+        });
     }
 
     private void sendModMsg(long val, CommandSource sender, String target) {
@@ -137,7 +161,7 @@ public class PlaytimeCommand implements SimpleCommand {
             player.sendMessage(configHandler.getNO_PERMISSION());
             return;
         }
-        final long PlayTime = main.getPlayTime(player.getUsername());
+        final long PlayTime = main.playtimeCache.get(player.getUsername());
         player.sendMessage(configHandler.decideNonComponent(configHandler.repL(configHandler.getYOUR_PLAYTIME(), PlayTime).replace("%place%", String.valueOf(main.getPlace(player.getUsername())))));
     }
 

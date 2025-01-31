@@ -72,8 +72,9 @@ public class ConfigHandler {
     private boolean minimessage;
     private long genTime;
     private long start;
+    private boolean OFFLINES_SHOULD_GET_REWARDS;
 
-    public final HashMap<Long, String> rewardsH = new HashMap<>();
+    private final TreeMap<Long, String> rewardsH = new TreeMap<>(); //TreeMap bc it needs to be ordered by the Long
 
     public void initConfig(@DataDirectory Path dataDirectory) {
         try{
@@ -155,6 +156,7 @@ public class ConfigHandler {
         if(!USE_CACHE)
             TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");
         //Rewards.
+        OFFLINES_SHOULD_GET_REWARDS = config.getBoolean("Data.OFFLINES_SHOULD_GET_REWARDS");
 
         getConfigIterator("Rewards", false).forEachRemaining(key -> rewardsH.put(Long.valueOf((String) key), config.getString("Rewards." + key)));
         genTime = System.currentTimeMillis() - start;

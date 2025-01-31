@@ -37,7 +37,7 @@ public class PlaytimeEvents {
     public EventTask onLeave(DisconnectEvent e) {
         return EventTask.async(() -> {
             final String playerName = e.getPlayer().getUsername();
-            final long playerTime = main.getPlayTime(playerName);
+            final long playerTime = main.playtimeCache.get(playerName);
             main.savePt(playerName, playerTime);
             if(!configHandler.isUSE_CACHE())
                 main.playtimeCache.remove(playerName);

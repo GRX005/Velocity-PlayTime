@@ -1,5 +1,5 @@
 #Velocity playtime logger.
-file-version: 10
+file-version: 11
 isDataFileUpToDate: false
 Messages:
   NO_CONSOLE_USE: "The console doesn't have a playtime."
@@ -45,6 +45,8 @@ Data:
     VIEW_OWN_TIME: false
     VIEW_OTHERS_TIME: false
     VIEW_TOPLIST: false
+  #The "vpt.rewards.exempt" perm can't be checked for offline players, so they don't get rewards by default when their pt is increased.
+  OFFLINES_SHOULD_GET_REWARDS: false
 
 #You can define your rewards under 'Rewards:' with the following format: [space]'playtime in milliseconds': command
 #(1sec = 1000ms, you need to have one space at the start of very line)

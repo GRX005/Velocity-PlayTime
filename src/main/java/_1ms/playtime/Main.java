@@ -153,8 +153,9 @@ public class Main {
             metrics.addCustomChart(new SimplePie("cfgserializer", () -> String.valueOf(configHandler.isMinimessage())));
             metrics.addCustomChart(new SimplePie("data_method", () -> configHandler.isDATABASE() ? "database" : "ymlfile"));
             metrics.addCustomChart(new SimplePie("anti_spam", () -> String.valueOf(configHandler.getSPAM_LIMIT())));
-            metrics.addCustomChart(new SimplePie("rewards", () -> String.valueOf(configHandler.rewardsH.size())));
+            metrics.addCustomChart(new SimplePie("rewards", () -> String.valueOf(configHandler.getRewardsH().size())));
             metrics.addCustomChart(new SimplePie("preload", () -> String.valueOf(configHandler.isPRELOAD_PLACEHOLDERS())));
+            metrics.addCustomChart(new SimplePie("offlinerewards", () -> String.valueOf(configHandler.isOFFLINES_SHOULD_GET_REWARDS())));
         }
 
         proxy.getEventManager().register(this, playtimeEvents);
@@ -166,12 +167,11 @@ public class Main {
                         final String name = player.getUsername();
                         final long playTime = playtimeCache.getOrDefault(name, 0L);
                         playtimeCache.put(name, playTime + 1000L);
-                        configHandler.rewardsH.keySet().forEach(key -> { //And rewards
+                        configHandler.getRewardsH().forEach((key, val) -> { //And rewards
                             try {
-                                if(key == playTime && !proxy.getPlayer(name).get().hasPermission("vpt.rewards.exempt")) {
-                                    proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), configHandler.rewardsH.get(key).replace("%player%", name));
-                                }
-                            }catch (Exception ignored) {}
+                                if(key == playTime && !proxy.getPlayer(name).get().hasPermission("vpt.rewards.exempt"))
+                                    proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), val.replace("%player%", name));
+                            } catch (Exception ignored) {}
                         });
                     }
                 })
@@ -243,10 +243,6 @@ public class Main {
         return tabargs;
     }
 
-    public long getPlayTime(String playerName) {
-        return playtimeCache.getOrDefault(playerName, -1L);
-    }
-
     public long getSavedPt(String name) {
         return configHandler.isDATABASE() ? mySQLHandler.readData(name) : configHandler.getPtFromConfig(name);
     }
@@ -314,7 +310,7 @@ public class Main {
         LinkedHashMap<String, Long> tl;
         if(playtimeCache.containsKey(pName)) {
             tl = doSort(null);
-            if ((long) tl.values().toArray()[tl.size() - 1] > getPlayTime(pName))
+            if ((long) tl.values().toArray()[tl.size() - 1] > playtimeCache.get(pName))
                 tl = requestHandler.getFullTL();
         }
         else

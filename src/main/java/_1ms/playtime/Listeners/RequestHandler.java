@@ -76,11 +76,11 @@ public class RequestHandler {
                     if(configHandler.isPRELOAD_PLACEHOLDERS()) {
                         final ByteArrayDataOutput outA = ByteStreams.newDataOutput();
                         outA.writeUTF("pt");
-                        Iterator<Object> iterator = main.getIterator();
+                        Iterator<String> iterator = main.getIterator();
                         final HashMap<String, Long> TempCache = new HashMap<>();
                         if (iterator != null) {
                             while (iterator.hasNext()) {
-                                String Pname = (String) iterator.next();
+                                String Pname = iterator.next();
                                 long Ptime = main.getSavedPt(Pname);
                                 TempCache.put(Pname, Ptime);
                                 iterator.remove();
@@ -158,8 +158,8 @@ public class RequestHandler {
         final HashMap<String, Long> pTempMap = new HashMap<>(main.playtimeCache);
 
         main.getIterator().forEachRemaining(player -> {
-            if(!pTempMap.containsKey((String)player)) {
-                pTempMap.put((String)player, main.getSavedPt((String)player));
+            if(!pTempMap.containsKey(player)) {
+                pTempMap.put(player, main.getSavedPt(player));
             }
         });
 

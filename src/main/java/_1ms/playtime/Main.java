@@ -56,12 +56,12 @@ public class Main {
     public MySQLHandler mySQLHandler;
     public final MinecraftChannelIdentifier MCI = MinecraftChannelIdentifier.from("velocity:playtime");
 
-    private final HashMap<String, Long> topSpamH = new HashMap<>();
-    private final HashMap<String, Long> spamH = new HashMap<>();
+    private final HashMap<String, SpamData> spamH = new HashMap<>();
+    public record SpamData(boolean isTop, long time){}
 
-    public void InitInstance() {
+    public void InitInstances() {
         configHandler = new ConfigHandler(this);
-        mySQLHandler = new MySQLHandler(configHandler);
+        mySQLHandler = new MySQLHandler(configHandler, this);
         cacheHandler = new CacheHandler(this, configHandler);
         playtimeCommand = new PlaytimeCommand(this, configHandler, cacheHandler);
         playtimeEvents = new PlaytimeEvents(this, configHandler);
@@ -88,39 +88,41 @@ public class Main {
         this.proxy = proxy;
         this.logger = logger;
         this.metricsFactory = metricsFactory;
-        InitInstance();
+        InitInstances();
 
         configHandler.initConfig(dataDirectory);
-        if(configHandler.isDATABASE())
-            loadDB();
     }
 
-    public void loadDB() {
-        if(mySQLHandler.conn != null)
+    public boolean loadDB() {
+        if(mySQLHandler.conn != null) //For reload
             mySQLHandler.closeConnection();
         else
-            new org.mariadb.jdbc.Driver();
+            new org.mariadb.jdbc.Driver(); //IF first time, init driver
         logger.info("Connecting to the database...");
-        mySQLHandler.openConnection();
-        try {
-            if(mySQLHandler.conn.isValid(2000))
+        if(!mySQLHandler.openConnection())
+            return false;
+        try { //Verify conn if it didn't fail.
+            if(mySQLHandler.conn.isValid(2)) //Test conn, wait 2s
                 logger.info("Successfully connected to the database.");
-            else
-                logger.error("Failed connecting to the database.");
+            else {
+                logger.error("Error while verifying the database connection.");
+                return false;
+            }
         } catch (SQLException e) {
-            throw new RuntimeException("Failed connecting to the database", e);
+            logger.error("Failed connecting to the database after initial connection succeeded: {}", e.getMessage());
+            return false;
         }
-    }
-
-    private void checkSpamH() {
-        spamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue()) > configHandler.getSPAM_LIMIT() + 5000);
-        topSpamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue()) > configHandler.getSPAM_LIMIT() + 5000);
+        return true;
     }
 
     @Subscribe
     public void onProxyInitialization(ProxyInitializeEvent event) {
 //        if(updateHandler.checkForUpdates())
 //            return;
+        if(configHandler.isDATABASE() && !loadDB()) {//Check for db here and connect, return if it failed to conn.
+            logger.error("The plugin couldn't load.");
+            return;
+        }
         if(configHandler.isCHECK_FOR_UPDATES())
             proxy.getScheduler().buildTask(this, () -> {
                 try {
@@ -137,7 +139,7 @@ public class Main {
             cacheHandler.buildCache();
             proxy.getScheduler().buildTask(this, () -> {
                 cacheHandler.updateCache();
-                checkSpamH();
+                spamH.entrySet().removeIf(entry -> (System.currentTimeMillis() - entry.getValue().time()) > configHandler.getSPAM_LIMIT() + 5000); //Clear hashmap of unneeded values
             }).repeat(configHandler.getCACHE_UPDATE_INTERVAL(), TimeUnit.MILLISECONDS).schedule();
         }
 
@@ -165,11 +167,13 @@ public class Main {
                 .buildTask(this, () -> {//Playtime counting happens here.
                     for(Player player : proxy.getAllPlayers()) {
                         final String name = player.getUsername();
-                        final long playTime = playtimeCache.getOrDefault(name, 0L);
+                        final long playTime = playtimeCache.getOrDefault(name, -67L); //Don't do anything if the player isn't yet added.
+                        if(playTime == -67L)
+                            return;
                         playtimeCache.put(name, playTime + 1000L);
                         configHandler.getRewardsH().forEach((key, val) -> { //And rewards
                             try {
-                                if(key == playTime && !proxy.getPlayer(name).get().hasPermission("vpt.rewards.exempt"))
+                                if(key == playTime && !proxy.getPlayer(name).orElseThrow().hasPermission("vpt.rewards.exempt")) //TODO MOD HERE
                                     proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), val.replace("%player%", name));
                             } catch (Exception ignored) {}
                         });
@@ -263,7 +267,7 @@ public class Main {
         configHandler.nullDataConfig();
     }
 
-    public Iterator<Object> getIterator() {
+    public Iterator<String> getIterator() {
         return configHandler.isDATABASE() ? mySQLHandler.getIterator() : configHandler.getConfigIterator("Player-Data", true);
     }
 
@@ -271,16 +275,15 @@ public class Main {
         final long currT = System.currentTimeMillis();
         if(!(configHandler.getSPAM_LIMIT() < 1) && sender instanceof Player player && !player.hasPermission("vpt.spam")) {
             final String name = player.getUsername();
-            HashMap<String, Long> tSpam = isTop ? topSpamH : spamH;
-            if(tSpam.containsKey(name)) {
-                final long diffT = currT - tSpam.get(name);
+            if(spamH.containsKey(name) && spamH.get(name).isTop() == isTop) {
+                final long diffT = currT - spamH.get(name).time();
                 if(diffT < configHandler.getSPAM_LIMIT()) {
                     final String msg = configHandler.getNO_SPAM().replace("%seconds%", String.valueOf(((configHandler.getSPAM_LIMIT()-diffT)/1000)+1));
                     sender.sendMessage(configHandler.decideNonComponent(msg));
                     return true;
                 }
             }
-            tSpam.put(name, currT);
+            spamH.put(name, new SpamData(isTop, currT));
         }
         return false;
     }

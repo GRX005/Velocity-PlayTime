@@ -20,7 +20,7 @@ public class PlaytimeEvents {
     }
     @Subscribe
     public EventTask onConnect(PostLoginEvent e) {
-        return EventTask.async(() -> {
+        return EventTask.async(() -> { //NOte it it async.
             String playerName = e.getPlayer().getUsername();
             if(!main.playtimeCache.containsKey(playerName)) {
                 long playtime = main.getSavedPt(playerName);
@@ -39,13 +39,12 @@ public class PlaytimeEvents {
             final String playerName = e.getPlayer().getUsername();
             final long playerTime = main.playtimeCache.get(playerName);
             main.savePt(playerName, playerTime);
-            if(!configHandler.isUSE_CACHE())
+            if(!configHandler.isUSE_CACHE()) //Rem if caching isnt used, otherwise updateCache task clears it when needed
                 main.playtimeCache.remove(playerName);
         });
     }
 
     @Subscribe
-    @SuppressWarnings("UnstableApiUsage")
     public EventTask onTabComplete(PlayerAvailableCommandsEvent e) {
         return EventTask.async(() -> {
             Player player = e.getPlayer();

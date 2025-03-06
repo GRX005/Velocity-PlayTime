@@ -37,11 +37,11 @@ public class PlaytimeTopCommand implements SimpleCommand {
     }
 
     public HashMap<String, Long> getInRuntime() {
-        Iterator<Object> iterator = main.getIterator();
+        Iterator<String> iterator = main.getIterator();
         final HashMap<String, Long> TempCache = new HashMap<>();
         if(iterator != null) {
             while (iterator.hasNext()) {
-                String Pname = (String) iterator.next();
+                String Pname = iterator.next();
                 Optional<Player> player = main.getProxy().getPlayer(Pname);
                 if (player.isEmpty()) {
                     long Ptime = main.getSavedPt(Pname);

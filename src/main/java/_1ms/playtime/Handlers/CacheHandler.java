@@ -17,14 +17,14 @@ public class CacheHandler {
         this.configHandler = configHandler;
     }
     public void buildCache() {
-        Iterator<Object> iterator = main.getIterator();
+        Iterator<String> iterator = main.getIterator();
         if(iterator == null)
             return;
         long start = System.currentTimeMillis();
         main.getLogger().info("Building Cache...");
         final HashMap<String, Long> TempCache = new HashMap<>();
         while (iterator.hasNext()) {
-            String Pname = iterator.next().toString();
+            String Pname = iterator.next();
             long Ptime = main.getSavedPt(Pname);
             TempCache.put(Pname, Ptime);
             iterator.remove();
@@ -46,12 +46,12 @@ public class CacheHandler {
     }
 
     public void upd2(String keyToRemove) {//Put next largest value
-        Iterator<Object> iterator = main.getIterator();
+        Iterator<String> iterator = main.getIterator();
         if(iterator == null)
             return;
         final HashMap<String, Long> TempCache = new HashMap<>(); //Load all values from config except the one given
         while (iterator.hasNext()) {
-            String Pname = iterator.next().toString();
+            String Pname = iterator.next();
             if(Objects.equals(Pname, keyToRemove))
                 continue;
             long Ptime = main.getSavedPt(Pname);
@@ -69,14 +69,15 @@ public class CacheHandler {
     public void updateCache() {//Runs at the interval defined in the config
         HashMap<String, Long> TempCache = generateTempCache();
         for (int i = 0; i < main.playtimeCache.size() - configHandler.getTOPLIST_LIMIT(); i++) { //Check players on the server only, not the toplist
-            Optional<Map.Entry<String, Long>> member = TempCache.entrySet().stream().min(Map.Entry.comparingByValue());
-            member.ifPresent(Entry -> {
-                Optional<Player> player = main.getProxy().getPlayer(Entry.getKey());
-                if(player.isEmpty()) {
-                    main.playtimeCache.remove(Entry.getKey());
-                }
-                TempCache.remove(Entry.getKey());
-            });
+            String member = TempCache.entrySet().stream()
+                    .min(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey)
+                    .orElseThrow();
+
+            Optional<Player> player = main.getProxy().getPlayer(member); //V Check if the pt has already been saved.
+            if(player.isEmpty() && main.playtimeCache.get(member) == main.getSavedPt(member))
+                main.playtimeCache.remove(member);
+            TempCache.remove(member);
         }
     }
 }

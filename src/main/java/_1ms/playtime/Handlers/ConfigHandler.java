@@ -1,7 +1,6 @@
 package _1ms.playtime.Handlers;
 
 import _1ms.playtime.Main;
-import com.velocitypowered.api.plugin.PluginContainer;
 import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import dev.dejvokep.boostedyaml.block.implementation.Section;
@@ -19,6 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Getter
 public class ConfigHandler {
@@ -77,7 +77,7 @@ public class ConfigHandler {
     private final TreeMap<Long, String> rewardsH = new TreeMap<>(); //TreeMap bc it needs to be ordered by the Long
 
     public void initConfig(@DataDirectory Path dataDirectory) {
-        try{
+        try {
             config = YamlDocument.create(new File(dataDirectory.toFile(), "config.yml"),
                     Objects.requireNonNull(getClass().getResourceAsStream("/config.yml")),
                     GeneralSettings.DEFAULT,
@@ -95,11 +95,8 @@ public class ConfigHandler {
 
             if(!DATABASE)
                 initDataConf(dataDirectory);
-
         } catch (IOException e) {
-            main.getLogger().error("Config initialize error. ", e);
-            Optional<PluginContainer> container = main.getProxy().getPluginManager().getPlugin("velocityplaytime"); //the plugin ID at the top.
-            container.ifPresent(pluginContainer -> pluginContainer.getExecutorService().shutdown());
+            throw new RuntimeException("Config initialize error. ", e); //Need to throw error, otherwise it won't unload.
         }
     }
 
@@ -158,7 +155,7 @@ public class ConfigHandler {
         //Rewards.
         OFFLINES_SHOULD_GET_REWARDS = config.getBoolean("Data.OFFLINES_SHOULD_GET_REWARDS");
 
-        getConfigIterator("Rewards", false).forEachRemaining(key -> rewardsH.put(Long.valueOf((String) key), config.getString("Rewards." + key)));
+        getConfigIterator("Rewards", false).forEachRemaining(key -> rewardsH.put(Long.valueOf(key), config.getString("Rewards." + key)));
         genTime = System.currentTimeMillis() - start;
     }
 
@@ -175,17 +172,20 @@ public class ConfigHandler {
             TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");
     }
 
-    public Iterator<Object> getConfigIterator(String path, boolean isData) {
+    public Iterator<String> getConfigIterator(String path, boolean isData) {
         final Section section = isData ? dataConfig.getSection(path) : config.getSection(path);
-        return section != null ? section.getKeys().iterator() : Collections.emptyIterator();
+        if(section == null) {
+            return Collections.emptyIterator();
+        } //Convert the config lib's Set<Object> into Iterator<String>
+        return section.getKeys().stream().map(String::valueOf).collect(Collectors.toSet()).iterator();
     }
 
     public String getPermsUsageCount() {
         int i = 0;
         final String basePath = "Data.PERMISSIONS";
-        Iterator<Object> iterator = getConfigIterator(basePath, false);
+        Iterator<String> iterator = getConfigIterator(basePath, false);
         while (iterator.hasNext()) {
-            String path = (String) iterator.next();
+            String path = iterator.next();
             if(config.getBoolean(basePath + "." + path))
                 i++;
             iterator.remove();

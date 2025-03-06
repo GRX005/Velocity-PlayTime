@@ -75,6 +75,8 @@ public class PlaytimeCommand implements SimpleCommand {
                             beforePt = main.playtimeCache.get(args[1]);
                             val = beforePt+num;
                             main.playtimeCache.replace(args[1], val);
+                            if(main.getProxy().getPlayer(args[1]).isEmpty())
+                                main.savePt(args[1], val);
                         } else {
                             beforePt = main.getSavedPt(args[1]);//Config if not
                             if(beforePt == -1) {
@@ -96,6 +98,8 @@ public class PlaytimeCommand implements SimpleCommand {
                                 return;
                             }
                             handleCache(args[1], val);
+                            if(main.getProxy().getPlayer(args[1]).isEmpty())
+                                main.savePt(args[1], val);
                         } else {
                             final long pt = main.getSavedPt(args[1]);//Config if not
                             if(pt == -1) {
@@ -116,6 +120,8 @@ public class PlaytimeCommand implements SimpleCommand {
                         if(main.playtimeCache.containsKey(args[1])) {//In cache
                             beforePt = main.playtimeCache.get(args[1]);
                             handleCache(args[1], num);
+                            if(main.getProxy().getPlayer(args[1]).isEmpty())
+                                main.savePt(args[1],num);
                         }
                         else {
                             beforePt = main.getSavedPt(args[1]);
@@ -136,13 +142,25 @@ public class PlaytimeCommand implements SimpleCommand {
     private void checkRewards(String pname, long beforePt, long afterPt) {
         configHandler.getRewardsH().forEach((key, value) -> { //Check rewards on PT ADD
             try {
-                if(beforePt < key && key <= afterPt && !main.getProxy().getPlayer(pname).get().hasPermission("vpt.rewards.exempt"))
+                if(beforePt < key && key <= afterPt && !main.getProxy().getPlayer(pname).orElseThrow().hasPermission("vpt.rewards.exempt")) {
+                    delay();//We need to delay by 100ms, otherwise lp will delay them, but execute in the wrong order.
                     main.getProxy().getCommandManager().executeAsync(main.getProxy().getConsoleCommandSource(), value.replace("%player%", pname));
+                }
             } catch (Exception ignored) {
-                if(configHandler.isOFFLINES_SHOULD_GET_REWARDS())
+                if(configHandler.isOFFLINES_SHOULD_GET_REWARDS()) {
+                    delay();
                     main.getProxy().getCommandManager().executeAsync(main.getProxy().getConsoleCommandSource(), value.replace("%player%", pname));
+                }
             }
         });
+    }
+
+    private void delay() {
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Error while delaying rewards cmd.", e);
+        }
     }
 
     private void sendModMsg(long val, CommandSource sender, String target) {

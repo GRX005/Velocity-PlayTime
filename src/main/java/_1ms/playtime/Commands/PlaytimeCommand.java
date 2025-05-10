@@ -1,3 +1,19 @@
+/*      This file is part of the Velocity Playtime project.
+        Copyright (C) 2024-2025 _1ms
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
 package _1ms.playtime.Commands;
 
 import _1ms.playtime.Handlers.CacheHandler;
@@ -60,7 +76,7 @@ public class PlaytimeCommand implements SimpleCommand {
                 }
                 long num;
                 try {
-                    num = Integer.parseInt(args[2]);
+                    num = Long.parseLong(args[2]);
                     if(num < 0)
                         throw new NumberFormatException();
                 } catch (NumberFormatException e) {
@@ -75,7 +91,7 @@ public class PlaytimeCommand implements SimpleCommand {
                             beforePt = main.playtimeCache.get(args[1]);
                             val = beforePt+num;
                             main.playtimeCache.replace(args[1], val);
-                            if(main.getProxy().getPlayer(args[1]).isEmpty())
+                            if(main.getProxy().getPlayer(args[1]).isEmpty()) //Save if player ain't on.
                                 main.savePt(args[1], val);
                         } else {
                             beforePt = main.getSavedPt(args[1]);//Config if not
@@ -85,6 +101,10 @@ public class PlaytimeCommand implements SimpleCommand {
                             }
                             val = beforePt+num;
                             main.savePt(args[1], val);
+                            var tempMap = cacheHandler.generateTempCache();
+                            if((long)tempMap.values().toArray()[tempMap.size()-1] < val) { //Put in cache if last val in it smaller than the added PT, the clearer will kill it later.
+                                main.playtimeCache.put(args[1], val);
+                            }
                         }
                         checkRewards(args[1], beforePt, val);
                         sendModMsg(val, sender, args[1]);
@@ -165,7 +185,7 @@ public class PlaytimeCommand implements SimpleCommand {
 
     private void sendModMsg(long val, CommandSource sender, String target) {
         if(sender instanceof Player)//Only send if it isn't console so automation can be done without the msgs.
-            sender.sendMessage(configHandler.decideNonComponent(configHandler.getPTSET().replace("%ms%", String.valueOf(val)).replace("%player%", target)));
+            sender.sendMessage(configHandler.decideNonComponent(configHandler.getPTSET().replace("%sec%", String.valueOf(val)).replace("%player%", target)));
     }
 
     public void handleCache(final String pname, final long val) {
@@ -191,10 +211,9 @@ public class PlaytimeCommand implements SimpleCommand {
         final List<String> tabargs = new ArrayList<>();
         final String[] target = invocation.arguments();
         if(target.length == 0) {
-            for (Player player : main.getProxy().getAllPlayers()) {
+            for (Player player : main.getProxy().getAllPlayers())
                 if (!player.equals(sender))
                     tabargs.add(player.getUsername());
-            }
             return CompletableFuture.completedFuture(tabargs);
         }
         if (target.length == 1) {
@@ -205,16 +224,14 @@ public class PlaytimeCommand implements SimpleCommand {
                 if ("sub".startsWith(prefix)) tabargs.add("sub");
                 if ("set".startsWith(prefix)) tabargs.add("set");
             }
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender) && player.getUsername().toLowerCase().startsWith(prefix))
+            for (Player player : main.getProxy().getAllPlayers())
+                if (player.getUsername().toLowerCase().startsWith(prefix))
                     tabargs.add(player.getUsername());
-            }
         } else if (target.length == 2 && (target[0].equalsIgnoreCase("add") || target[0].equalsIgnoreCase("sub") || target[0].equalsIgnoreCase("set")) && sender.hasPermission("vpt.modify")) {
             // Second argument tab completion for specific first arguments
-            for (Player player : main.getProxy().getAllPlayers()) {
-                if (!player.equals(sender) && player.getUsername().toLowerCase().startsWith(target[1].toLowerCase()))
+            for (Player player : main.getProxy().getAllPlayers())
+                if (player.getUsername().toLowerCase().startsWith(target[1].toLowerCase()))
                     tabargs.add(player.getUsername());
-            }
         }
         return CompletableFuture.completedFuture(tabargs);
     }

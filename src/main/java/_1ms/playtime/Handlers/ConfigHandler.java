@@ -1,3 +1,19 @@
+/*      This file is part of the Velocity Playtime project.
+        Copyright (C) 2024-2025 _1ms
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
 package _1ms.playtime.Handlers;
 
 import _1ms.playtime.Main;
@@ -21,7 +37,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Getter
-public class ConfigHandler {
+public class ConfigHandler {//TODO REMOVE LOMBOK maybe
     @Getter(AccessLevel.NONE)
     private final Main main;
     @Getter(AccessLevel.NONE)
@@ -39,8 +55,6 @@ public class ConfigHandler {
     private String OTHER_PLAYTIME;
     private Component NO_PERMISSION;
     private Component CONFIG_RELOAD;
-    private String PTRESET;
-    private Component PTRESET_HELP;
     private Component PTRESETALL;
     private Component PTRESETALL_CONFIRM;
     private String PTSET;
@@ -54,6 +68,14 @@ public class ConfigHandler {
     private String USERNAME;
     private String PASSWORD;
     private Component INVALID_VALUE;
+    private String PTN;
+    private String[] PTA;
+    private String PTTN;
+    private String[] PTTA;
+    private String PTRLN;
+    private String[] PTRLA;
+    private String PTRAN;
+    private String[] PTRAA;
 
 
     private int TOPLIST_LIMIT;
@@ -75,6 +97,7 @@ public class ConfigHandler {
     private boolean OFFLINES_SHOULD_GET_REWARDS;
 
     private final TreeMap<Long, String> rewardsH = new TreeMap<>(); //TreeMap bc it needs to be ordered by the Long
+    private String[] excludedSrvs = {};
 
     public void initConfig(@DataDirectory Path dataDirectory) {
         try {
@@ -126,8 +149,6 @@ public class ConfigHandler {
         NO_PLAYER = initComp("Messages.NO_PLAYER");
         OTHER_PLAYTIME = getConfStr("Messages.PLAYTIME_OTHERS");
         CONFIG_RELOAD = initComp("Messages.CONFIG_RELOAD");
-        PTRESET = getConfStr("Messages.PTRESET");
-        PTRESET_HELP = initComp("Messages.PTRESET_HELP");
         PTRESETALL = initComp("Messages.PTRESETALL");
         PTRESETALL_CONFIRM = initComp("Messages.PTRESETALL_CONFIRM");
         PTSET = getConfStr("Messages.PTSET");
@@ -157,6 +178,10 @@ public class ConfigHandler {
 
         getConfigIterator("Rewards", false).forEachRemaining(key -> rewardsH.put(Long.valueOf(key), config.getString("Rewards." + key)));
         genTime = System.currentTimeMillis() - start;
+        try {
+            excludedSrvs = config.getString("Data.EXCLUDED_SERVERS").split(",");
+        } catch (Exception ignored) {} //IF empty
+
     }
 
     public void makeNonChanging() {
@@ -169,7 +194,15 @@ public class ConfigHandler {
         DATABASE = config.getString("Data.DATA_METHOD").equals("DATABASE");
         PRELOAD_PLACEHOLDERS = config.getBoolean("Data.PRELOAD_PLACEHOLDERS");
         if(USE_CACHE)
-            TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");
+            TOPLIST_LIMIT = config.getInt("Data.TOPLIST_LIMIT");//CMDS, non reloadable as they are only registered once.
+        PTN = config.getString("Commands.playtime.MAIN_CMD");
+        PTA = config.getString("Commands.playtime.ALIASES").split(",");
+        PTTN = config.getString("Commands.playtimetop.MAIN_CMD");
+        PTTA = config.getString("Commands.playtimetop.ALIASES").split(",");
+        PTRLN = config.getString("Commands.playtimereload.MAIN_CMD");
+        PTRLA = config.getString("Commands.playtimereload.ALIASES").split(",");
+        PTRAN = config.getString("Commands.playtimeresetall.MAIN_CMD");
+        PTRAA = config.getString("Commands.playtimeresetall.ALIASES").split(",");
     }
 
     public Iterator<String> getConfigIterator(String path, boolean isData) {

@@ -1,3 +1,19 @@
+/*      This file is part of the Velocity Playtime project.
+        Copyright (C) 2024-2025 _1ms
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
 package _1ms.playtime.Listeners;
 
 import _1ms.playtime.Handlers.ConfigHandler;
@@ -20,15 +36,15 @@ public class PlaytimeEvents {
     }
     @Subscribe
     public EventTask onConnect(PostLoginEvent e) {
-        return EventTask.async(() -> { //NOte it it async.
+        return EventTask.async(() -> { //Note it is async.
             String playerName = e.getPlayer().getUsername();
-            if(!main.playtimeCache.containsKey(playerName)) {
+            if(!main.playtimeCache.containsKey(playerName)) {//Only put if not cached already.
                 long playtime = main.getSavedPt(playerName);
-                if (playtime == -1) {
+                if (playtime == -1) {//Here, first time joined.
                     main.playtimeCache.put(playerName, 0L);
                     return;
                 }
-                main.playtimeCache.put(playerName, playtime);
+                main.playtimeCache.put(playerName, playtime); //LOAD pt from before.
             }
         });
     }
@@ -37,7 +53,12 @@ public class PlaytimeEvents {
     public EventTask onLeave(DisconnectEvent e) {
         return EventTask.async(() -> {
             final String playerName = e.getPlayer().getUsername();
-            final long playerTime = main.playtimeCache.get(playerName);
+            long playerTime;
+            try {//Ret if null, bugfix for when the player leaves too quickly.
+                playerTime = main.playtimeCache.get(playerName);
+            } catch (Exception ex) {
+                return;
+            }
             main.savePt(playerName, playerTime);
             if(!configHandler.isUSE_CACHE()) //Rem if caching isnt used, otherwise updateCache task clears it when needed
                 main.playtimeCache.remove(playerName);

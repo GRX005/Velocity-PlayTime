@@ -1,3 +1,19 @@
+/*      This file is part of the Velocity Playtime project.
+        Copyright (C) 2024-2025 _1ms
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
 package _1ms.playtime;
 
 import _1ms.BuildConstants;
@@ -5,7 +21,10 @@ import _1ms.playtime.Commands.ConfigReload;
 import _1ms.playtime.Commands.PlaytimeCommand;
 import _1ms.playtime.Commands.PlaytimeResetAll;
 import _1ms.playtime.Commands.PlaytimeTopCommand;
-import _1ms.playtime.Handlers.*;
+import _1ms.playtime.Handlers.CacheHandler;
+import _1ms.playtime.Handlers.ConfigHandler;
+import _1ms.playtime.Handlers.MySQLHandler;
+import _1ms.playtime.Handlers.UpdateHandler;
 import _1ms.playtime.Listeners.PlaytimeEvents;
 import _1ms.playtime.Listeners.RequestHandler;
 import com.google.inject.Inject;
@@ -49,7 +68,6 @@ public class Main {
     public PlaytimeEvents playtimeEvents;
     public PlaytimeTopCommand playtimeTopCommand;
     public RequestHandler requestHandler;
-    public DataConverter dataConverter;
     public ConfigReload configReload;
     public UpdateHandler updateHandler;
     public PlaytimeResetAll playtimeResetAll;
@@ -67,7 +85,6 @@ public class Main {
         playtimeEvents = new PlaytimeEvents(this, configHandler);
         playtimeTopCommand = new PlaytimeTopCommand(this, configHandler);
         requestHandler = new RequestHandler(this, playtimeTopCommand, configHandler);
-        dataConverter = new DataConverter(this, configHandler);
         configReload = new ConfigReload(configHandler);
         updateHandler = new UpdateHandler(this);
         playtimeResetAll = new PlaytimeResetAll(this, configHandler);
@@ -123,17 +140,16 @@ public class Main {
             logger.error("The plugin couldn't load.");
             return;
         }
-        if(configHandler.isCHECK_FOR_UPDATES())
-            proxy.getScheduler().buildTask(this, () -> {
-                try {
-                    updateHandler.checkForUpdates();
-                } catch (Exception ignored) {}
-            }).schedule();
+        if(configHandler.isCHECK_FOR_UPDATES())//Using a virtual thread is likely better than velocity's scheduler for a little upd check?
+            Thread.ofVirtual().start(updateHandler::checkForUpdates);
 
         proxy.getChannelRegistrar().register(MCI);
-
-        if(!configHandler.isDataFileUpToDate())
-            dataConverter.checkConfig();
+//Convert old data cfgs from ms to sec. If isDataFileUpToDate has been set to true, then the plugin already ran, so there is pt, otherwise it's already been converted or never been ran.
+        if(configHandler.isDataFileUpToDate()) {
+            getLogger().info("Converting playtime from ms to seconds...");
+            getIterator().forEachRemaining(c -> savePt(c, getSavedPt(c) / 1000));
+            configHandler.modifyMainConfig("isDataFileUpToDate", false);
+        }
 
         if(configHandler.isUSE_CACHE()) {
             cacheHandler.buildCache();
@@ -159,61 +175,71 @@ public class Main {
             metrics.addCustomChart(new SimplePie("preload", () -> String.valueOf(configHandler.isPRELOAD_PLACEHOLDERS())));
             metrics.addCustomChart(new SimplePie("offlinerewards", () -> String.valueOf(configHandler.isOFFLINES_SHOULD_GET_REWARDS())));
         }
-
+//Register events
         proxy.getEventManager().register(this, playtimeEvents);
         proxy.getEventManager().register(this, requestHandler);
-
+//Start counting PT
         proxy.getScheduler()
-                .buildTask(this, () -> {//Playtime counting happens here.
-                    for(Player player : proxy.getAllPlayers()) {
-                        final String name = player.getUsername();
-                        final long playTime = playtimeCache.getOrDefault(name, -67L); //Don't do anything if the player isn't yet added.
-                        if(playTime == -67L)
-                            return;
-                        playtimeCache.put(name, playTime + 1000L);
-                        configHandler.getRewardsH().forEach((key, val) -> { //And rewards
-                            try {
-                                if(key == playTime && !proxy.getPlayer(name).orElseThrow().hasPermission("vpt.rewards.exempt")) //TODO MOD HERE
-                                    proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), val.replace("%player%", name));
-                            } catch (Exception ignored) {}
-                        });
-                    }
-                })
+                .buildTask(this, this::countPT)
                 .repeat(1L, TimeUnit.SECONDS)
                 .schedule();
-
+//Register cmds
         CommandManager commandManager = proxy.getCommandManager();
-        CommandMeta commandMeta = commandManager.metaBuilder("playtime")
-                .aliases("pt")
+        CommandMeta commandMeta = commandManager.metaBuilder(configHandler.getPTN())
+                .aliases(configHandler.getPTA())
                 .plugin(this)
                 .build();
         SimpleCommand simpleCommand = playtimeCommand;
         commandManager.register(commandMeta, simpleCommand);
 
-        CommandMeta commandMeta2 = commandManager.metaBuilder("playtimetop")
-                .aliases("pttop", "ptt")
+        CommandMeta commandMeta2 = commandManager.metaBuilder(configHandler.getPTTN())
+                .aliases(configHandler.getPTTA())
                 .plugin(this)
                 .build();
         SimpleCommand simpleCommand2 = playtimeTopCommand;
         commandManager.register(commandMeta2, simpleCommand2);
 
-        CommandMeta commandMeta3 = commandManager.metaBuilder("playtimereload")
-                .aliases("ptrl", "ptreload")
+        CommandMeta commandMeta3 = commandManager.metaBuilder(configHandler.getPTRLN())
+                .aliases(configHandler.getPTRLA())
                 .plugin(this)
                 .build();
         SimpleCommand simpleCommand3 = configReload;
         commandManager.register(commandMeta3, simpleCommand3);
 
-        CommandMeta commandMeta4 = commandManager.metaBuilder("playtimeresetall")
-                .aliases( "ptra", "ptresetall")
+        CommandMeta commandMeta4 = commandManager.metaBuilder(configHandler.getPTRAN())
+                .aliases(configHandler.getPTRAA())
                 .plugin(this)
                 .build();
         SimpleCommand simpleCommand4 = playtimeResetAll;
         commandManager.register(commandMeta4, simpleCommand4);
-
+//Send restart packet to PlaytimeLink.
         requestHandler.sendRS();
 
         logger.info("Velocity PlayTime Loaded.");
+    }
+
+    void countPT() {//Playtime counting happens here.
+        proxy.getAllPlayers().forEach(p->{
+            long pt;
+            String pname = p.getUsername();
+            try {
+                pt = playtimeCache.get(pname);
+            } catch (Exception e) {
+                return;
+            }
+            for(String srv : configHandler.getExcludedSrvs()) { //Don't count if the player is on an excluded srv.
+                final var Csrv = p.getCurrentServer();
+                if (Csrv.isPresent() && Objects.equals(Csrv.get().getServerInfo().getName(), srv))
+                    return;
+            }
+            playtimeCache.replace(pname, pt+1L);
+            configHandler.getRewardsH().forEach((key, val) -> { //And rewards
+                try {
+                    if(Objects.equals(key, pt) && !proxy.getPlayer(pname).orElseThrow().hasPermission("vpt.rewards.exempt"))
+                        proxy.getCommandManager().executeAsync(proxy.getConsoleCommandSource(), val.replace("%player%", pname));
+                } catch (Exception ignored) {}
+            });
+        });
     }
 
     public CompletableFuture<Boolean> checkServerStatus(RegisteredServer server) {
@@ -290,21 +316,21 @@ public class Main {
 
     public long calculatePlayTime(long rawValue, char v) {
         return switch (v) {
-            case 'w' -> rawValue / 604800000;
-            case 'd' -> (rawValue % 604800000L) / 86400000;
-            case 'h' -> ((rawValue % 604800000L) % 86400000) / 3600000;
-            case 'm' -> (((rawValue % 604800000L) % 86400000) % 3600000) / 60000;
-            case 's' -> ((((rawValue % 604800000L) % 86400000) % 3600000) % 60000) / 1000;
+            case 'w' -> rawValue / 604800;
+            case 'd' -> (rawValue % 604800) / 86400;
+            case 'h' -> ((rawValue % 604800) % 86400) / 3600;
+            case 'm' -> (((rawValue % 604000) % 86400) % 3600) / 60;
+            case 's' -> ((((rawValue % 604800) % 86400) % 3600) % 60);
             default -> -1;
         };
     }
 
     public long calcTotalPT(long rawValue, char v) {
         return switch (v) {
-            case 'd' -> rawValue / 86400000;
-            case 'h' -> rawValue / 3600000;
-            case 'm' -> rawValue / 60000;
-            case 's' -> rawValue / 1000;
+            case 'd' -> rawValue / 86400;
+            case 'h' -> rawValue / 3600;
+            case 'm' -> rawValue / 60;
+            case 's' -> rawValue;
             default -> -1;
         };
     }

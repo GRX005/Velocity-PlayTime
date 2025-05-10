@@ -1,34 +1,47 @@
 #Velocity playtime logger.
-file-version: 11
+#Don't change the below 2, "isDataFileUpToDate" should be false, it's normal.
+file-version: 12
 isDataFileUpToDate: false
 Messages:
-  NO_CONSOLE_USE: "The console doesn't have a playtime."
-  PLAYTIME_YOURS: "§8----------------------\\n§aYour playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs. Place: %place%\\n§8----------------------"
-  NO_PLAYER: "§cNo player found with this name."
-  PLAYTIME_OTHERS: "§8----------------------\\n§a%player%'s playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs. Place: %place%\\n§8----------------------"
-  NO_PERMISSION: "§cYou don't have permission for this command."
-  CONFIG_RELOAD: "§aThe config has been reloaded."
-  PTRESET: "§a%player%'s playtime has been reset."
-  PTRESET_HELP: "§a/playtimereset [player]"
-  PTRESETALL: "§aAll playtimes have been reset."
-  PTRESETALL_CONFIRM: "§aIf you are sure to delete every playtime, type /ptresetall confirm"
-  PTSET: "§aSet %player%'s playtime to %ms% ms."
-  INVALID_ARGS: "§cYou've entered invalid arguments."
-  TOP_PLAYTIME_HEADER: "§aPlaytime toplist: "
-  TOP_PLAYTIME_VALUES: "§3%place%.: §a%player%: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs."
-  TOP_PLAYTIME_FOOTER: "§a-------------------------------------"
-  NO_SPAM: "§cDo not spam the command. You have to wait %seconds% secs to do that again."
-  INVALID_VALUE: "§cYou've entered an invalid value."
+  NO_CONSOLE_USE: <red>The console doesn't have a playtime.</red>
+  PLAYTIME_YOURS: '<gradient:#00800E:#00FF1C>----------------------</gradient>\n<gradient:#F58410:#FFF800>Your playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs.</gradient> <gradient:#F58410:#FFF800>Place: %place%</gradient>\n<gradient:#00800E:#00FF1C>----------------------</gradient>'
+  NO_PLAYER: <gradient:#F51010:#FF5300>No player found with this name.</gradient>
+  PLAYTIME_OTHERS: '<gradient:#00800E:#00FF1C>----------------------</gradient>\n<gradient:#F58410:#FFF800>%player%''s playtime: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs.</gradient> <gradient:#F58410:#FFF800>Place: %place%</gradient>\n<gradient:#00800E:#00FF1C>----------------------</gradient>'
+  NO_PERMISSION: <gradient:#F51010:#FF5300>You don't have permission for this command.</gradient>
+  CONFIG_RELOAD: <gradient:#13F510:#94FF00>The config has been reloaded.</gradient>
+  PTRESETALL: <gradient:#13F510:#94FF00>All playtimes have been reset.</gradient>
+  PTRESETALL_CONFIRM: <gradient:#13F510:#94FF00>If you are sure to delete every playtime, type /ptresetall confirm.</gradient>
+  PTSET: <gradient:#13F510:#94FF00>You've set %player%'s playtime to %sec% in seconds.</gradient>
+  INVALID_ARGS: <gradient:#F51010:#FF5300>You've entered invalid arguments.</gradient>
+  TOP_PLAYTIME_HEADER: '<gradient:#00800E:#00FF1C>-------------------------------------</gradient>\n<gradient:#F58410:#FFF800>Playtime toplist:</gradient> '
+  TOP_PLAYTIME_VALUES: '<gradient:#F58410:#FFF800>%place%.: %player%: %weeks% weeks %days% days %hours% hours %minutes% minutes %seconds% secs.</gradient>'
+  TOP_PLAYTIME_FOOTER: <gradient:#00800E:#00FF1C>-------------------------------------</gradient>
+  NO_SPAM: <gradient:#F51010:#FF5300>Do not spam the command. You have to wait %seconds%s to do that again.</gradient>
+  INVALID_VALUE: <gradient:#F51010:#FF5300>You've entered an invalid value.</gradient>
+
+Commands:
+  playtime:
+    MAIN_CMD: playtime
+    ALIASES: pt
+  playtimetop:
+    MAIN_CMD: playtimetop
+    ALIASES: ptt,pttop
+  playtimereload:
+    MAIN_CMD: playtimereload
+    ALIASES: ptrl,ptreload
+  playtimeresetall:
+    MAIN_CMD: playtimeresetall
+    ALIASES: ptra,ptresetall
 
 Data:
   TOPLIST_LIMIT: 10
   BSTATS: true
-  #If you are using placeholders with the PlaytimeLink plugin, and have issues with them, try enabling this.
+  #If you have issues with the placeholders, like pt not loading in welcome messages, try enabling this.
   PRELOAD_PLACEHOLDERS: false
   #Ex: 1000 for 1 second.
   SPAM_LIMIT: 0
   #Choices are: "VANILLA" or "MINIMESSAGE". Use minimessage if you want gradients.
-  CONFIG_SERIALIZER: VANILLA
+  CONFIG_SERIALIZER: MINIMESSAGE
   #Choices are: "YMLFILE" or "DATABASE".
   DATA_METHOD: YMLFILE
   DATABASE: #Only applies if you chose DATABASE as DATA_METHOD, leave password at null if the db doesn't have one, ex: jdbc:mariadb://127.0.0.1:3306/playtime?user=root&password=
@@ -38,7 +51,7 @@ Data:
     USERNAME: root
     PASSWORD: null
   CHECK_FOR_UPDATES: true
-  CACHING: #Should improve performance when turned on. If there are issues with the plugin, try turning it off. The 2nd option is about how often unneeded entries are cleared from the cache, in ms. Note: Toplist limit can't be reloaded if this is turned on.
+  CACHING: #Should improve performance when turned on. If there are issues with the plugin, try turning it off. The 2nd option is about how often unneeded entries are cleared from the cache, in ms.
     USE_CACHE: true
     CACHE_UPDATE_INTERVAL: 60000
   PERMISSIONS: #Permissions are not used by default, they can be turned on if needed.
@@ -47,8 +60,8 @@ Data:
     VIEW_TOPLIST: false
   #The "vpt.rewards.exempt" perm can't be checked for offline players, so they don't get rewards by default when their pt is increased.
   OFFLINES_SHOULD_GET_REWARDS: false
-
-#You can define your rewards under 'Rewards:' with the following format: [space]'playtime in milliseconds': command
-#(1sec = 1000ms, you need to have one space at the start of very line)
-# '15000': lpv user %player% parent set group #Example command.
+  #Servers where you don't want pt to be counted, like your afk lobbies, etc. For ex:. EXCLUDED_SERVERS: server1,server2,server3 etc..
+  EXCLUDED_SERVERS:
+#You can define your rewards under 'Rewards:' with the following format: [space]'playtime in seconds': command
+# '15': lpv user %player% parent set group #Example command.
 Rewards:

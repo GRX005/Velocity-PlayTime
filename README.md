@@ -5,7 +5,7 @@
 ***Features:***
 - Manages playtime asynchronously across the whole network.
 - Configurable Playtime Toplist feature.
-- All messages seen by players are configurable, with vanilla or minimessage syntax.
+- All messages seen by players are configurable, with vanilla or minimessage syntax. Cmds can be configured too.
 - Configurable permissions.
 - The plugin manages a dynamic cache for relevant playtime values. Messages and settings are also cached.
 - PlaceholderAPI support through plugin channel syncing, using my PlaytimeLink plugin.
